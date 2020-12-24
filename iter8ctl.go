@@ -15,7 +15,24 @@ var namespaceRegex *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]
 // Exact match required for apiVersion: v2alpha1 is the only allowed value
 var apiVersionRegex *regexp.Regexp = regexp.MustCompile(`\bv2alpha1\b`)
 
+// OSExiter wraps os.Exit(1) calls. Useful for mocks in unit tests.
+// Reference: https://medium.com/@ankur_anand/how-to-mock-in-your-go-golang-tests-b9eee7d7c266
+type OSExiter interface {
+	Exit(code int)
+}
+
+type myOS struct{}
+
+func (m myOS) Exit(code int) {
+	os.Exit(code)
+}
+
+var osExiter OSExiter
+
 func init() {
+	// Initializing exiter
+	osExiter = myOS{}
+
 	// Log as JSON instead of the default ASCII formatter.
 	// log.SetFormatter(&log.JSONFormatter{})
 
@@ -38,7 +55,7 @@ func main() {
 
 	if len(os.Args) < 2 {
 		log.Error("expected 'describe' subcommand")
-		os.Exit(1)
+		osExiter.Exit(1)
 	}
 
 	switch os.Args[1] {
@@ -53,14 +70,14 @@ func main() {
 			}).Error("expected a valid value for (experiment) name and namespace.")
 			log.Error("name should contain no more than 253 characters and only lowercase alphanumeric characters, '-' or '.'; start and end with an alphanumeric character.")
 			log.Error("namespace should contain no more than 63 characters and only lowercase alphanumeric characters, or '-'; start and end with an alphanumeric character.")
-			os.Exit(1)
+			osExiter.Exit(1)
 		}
 
 		if !apiVersionRegex.MatchString(*apiVersion) {
 			log.WithFields(log.Fields{
 				"apiVersion": *apiVersion,
 			}).Error("expected a valid value for (experiment) api version.")
-			os.Exit(1)
+			osExiter.Exit(1)
 		}
 
 		// experiment, err := GetExperiment(experimentName, experimentNamespace, apiVersion)
@@ -68,13 +85,13 @@ func main() {
 		// 	fmt.Fprintln(out, "Encountered error while getting experiment")
 		// 	fmt.Fprintln(out, "  error:", err)
 
-		// 	os.Exit(1)
+		// 	osExiter.Exit(1)
 		// }
 
 	default:
 		log.WithFields(log.Fields{
 			"subcommand": os.Args[1],
 		}).Error("expected 'describe' subcommand")
-		os.Exit(1)
+		osExiter.Exit(1)
 	}
 }
