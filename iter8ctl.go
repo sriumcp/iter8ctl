@@ -6,6 +6,8 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/iter8-tools/iter8ctl/exp"
 )
 
 // Rules for valid k8s resource name and namespace are here: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
@@ -80,13 +82,15 @@ func main() {
 			osExiter.Exit(1)
 		}
 
-		// experiment, err := GetExperiment(experimentName, experimentNamespace, apiVersion)
-		// if err != nil {
-		// 	fmt.Fprintln(out, "Encountered error while getting experiment")
-		// 	fmt.Fprintln(out, "  error:", err)
+		experiment, err := exp.GetExperiment(experimentName, experimentNamespace, apiVersion)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("Encountered error while getting experiment")
+			osExiter.Exit(1)
+		}
 
-		// 	osExiter.Exit(1)
-		// }
+		experiment.PrintAnalysis()
 
 	default:
 		log.WithFields(log.Fields{
