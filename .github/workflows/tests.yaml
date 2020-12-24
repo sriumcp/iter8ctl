@@ -26,6 +26,7 @@ jobs:
   code-coverage:
     needs: test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
     - name: Install Go
       uses: actions/setup-go@v2
