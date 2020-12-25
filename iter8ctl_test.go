@@ -34,7 +34,6 @@ func TestIter8ctl(t *testing.T) {
 }
 
 // Mocking myOS.Exit function
-// Reference: https://medium.com/@ankur_anand/how-to-mock-in-your-go-golang-tests-b9eee7d7c266
 type myOSMock struct{}
 
 func (m myOSMock) Exit(code int) {
