@@ -5,6 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"k8s.io/api/node/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,6 +17,17 @@ import (
 
 // Every invocation of iter8ctl in this test should succeed; specifically, main() should not invoke os.Exit(1)
 func TestIter8ctl(t *testing.T) {
+	// mock k8s client
+	crScheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(crScheme)
+	if err != nil {
+		panic("Error while adding to v1alpha1 to new scheme")
+	}
+
+	getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
+		return fake.NewFakeClientWithScheme(crScheme), nil
+	}
+
 	for _, test := range []struct {
 		Args   []string
 		Output string

@@ -33,10 +33,6 @@ var osExiter OSExiter
 func init() {
 	osExiter = myOS{}
 
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
-
 	log.SetLevel(log.WarnLevel)
 }
 
@@ -69,9 +65,9 @@ func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
 	d.experimentNamespace = describeCmd.String("namespace", "default", "experiment namespace")
 	d.apiVersion = describeCmd.String("apiVersion", "v2alpha1", "experiment api version")
 	if home := homedir.HomeDir(); home != "" {
-		d.kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+		d.kubeconfig = describeCmd.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
-		d.kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+		d.kubeconfig = describeCmd.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 	d.err = describeCmd.Parse(args)
 
@@ -129,28 +125,35 @@ func (d *DescribeCmd) validate() *DescribeCmd {
 	return d.validateName().validateNamespace().validateAPIVersion()
 }
 
+var getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", *d.kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	crScheme := runtime.NewScheme()
+	err = v1alpha1.AddToScheme(crScheme)
+	if err != nil {
+		return nil, err
+	}
+
+	rc, err := runtimeclient.New(config, client.Options{
+		Scheme: crScheme,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return rc, nil
+}
+
 // setK8sClient sets the clientset variable within DescribeCmd struct
 func (d *DescribeCmd) setK8sClient() *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
 
-	config, err := clientcmd.BuildConfigFromFlags("", *d.kubeconfig)
-	if err != nil {
-		d.err = err
-		return d
-	}
-	crScheme := runtime.NewScheme()
-
-	err = v1alpha1.AddToScheme(crScheme)
-	if err != nil {
-		d.err = err
-		return d
-	}
-
-	d.client, err = runtimeclient.New(config, client.Options{
-		Scheme: crScheme,
-	})
+	var err error
+	d.client, err = getK8sClient(d)
 	if err != nil {
 		d.err = err
 		return d
@@ -186,11 +189,11 @@ func main() {
 	switch os.Args[1] {
 
 	case "describe":
-		desc := describeBuilder()
-		err := desc.parseArgs(os.Args[2:]).validate().setK8sClient().getExperiment().printAnalysis()
-		if err != nil {
+		d := describeBuilder()
+		d.parseArgs(os.Args[2:]).validate().setK8sClient().getExperiment().printAnalysis()
+		if d.err != nil {
 			log.WithFields(log.Fields{
-				"error": err,
+				"error": d.err,
 			}).Error("'describe' command resulted in error")
 			osExiter.Exit(1)
 		}
