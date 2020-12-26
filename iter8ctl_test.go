@@ -13,10 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Unit tests
+// Mocking myOS.Exit function
+type myOSMock struct{}
 
-// Every invocation of iter8ctl in this test should succeed; specifically, main() should not invoke os.Exit(1)
-func TestIter8ctl(t *testing.T) {
+func (m myOSMock) Exit(code int) {
+	if code > 0 {
+		panic(fmt.Sprintf("Exiting with error code %v", code))
+	}
+}
+
+// initTest initializes unit tests
+func initTest() {
 	// mock k8s client
 	crScheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(crScheme)
@@ -28,6 +35,14 @@ func TestIter8ctl(t *testing.T) {
 		return fake.NewFakeClientWithScheme(crScheme), nil
 	}
 
+	// Assigning mock os lib
+	osExiter = myOSMock{}
+}
+
+// Unit tests
+// Every invocation of iter8ctl in this test should succeed; specifically, main() should not invoke os.Exit(1)
+func TestIter8ctl(t *testing.T) {
+	initTest()
 	for _, test := range []struct {
 		Args   []string
 		Output string
@@ -49,19 +64,8 @@ func TestIter8ctl(t *testing.T) {
 	}
 }
 
-// Mocking myOS.Exit function
-type myOSMock struct{}
-
-func (m myOSMock) Exit(code int) {
-	if code > 0 {
-		panic(fmt.Sprintf("Exiting with error code %v", code))
-	}
-}
-
 func TestIter8ctlInvalidSubcommand(t *testing.T) {
-	// Assigning mock here
-	osExiter = myOSMock{}
-
+	initTest()
 	for _, test := range []struct {
 		Args   []string
 		Output string
@@ -81,8 +85,7 @@ func TestIter8ctlInvalidSubcommand(t *testing.T) {
 }
 
 func TestIter8ctlInvalidNames(t *testing.T) {
-	// Assigning mock here
-	osExiter = myOSMock{}
+	initTest()
 
 	for _, test := range []struct {
 		Args   []string
@@ -112,8 +115,7 @@ func TestIter8ctlInvalidNames(t *testing.T) {
 }
 
 func TestIter8ctlInvalidAPIVersion(t *testing.T) {
-	// Assigning mock here
-	osExiter = myOSMock{}
+	initTest()
 
 	for _, test := range []struct {
 		Args   []string

@@ -1,15 +1,17 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	v2alpha1 "github.com/iter8-tools/etc3/api/v2alpha1"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/node/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -32,26 +34,47 @@ var osExiter OSExiter
 // init initializes osExiter and logging
 func init() {
 	osExiter = myOS{}
-
-	log.SetLevel(log.WarnLevel)
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
+	log.SetReportCaller(true)
 }
 
 // DescribeCmd allows for building up a describe command in a chained fashion.
 // Any errors are stored until the end of your call, so you only have to
 // check once.
 type DescribeCmd struct {
+	flagSet             *flag.FlagSet
 	experimentName      *string
 	experimentNamespace *string
 	apiVersion          *string
 	kubeconfig          *string
 	client              client.Client
 	experiment          *v2alpha1.Experiment
+	logLevel            *string
 	err                 error
 }
 
-// describeBuilder returns a DescribeCmd struct pointer with struct variables initialized to 'nil' values.
+// describeBuilder returns an initial DescribeCmd struct pointer.
 func describeBuilder() *DescribeCmd {
-	return &DescribeCmd{}
+	flagSet := flag.NewFlagSet("describe", flag.ExitOnError)
+	experimentName := flagSet.String("name", "", "experiment name")
+	experimentNamespace := flagSet.String("namespace", "default", "experiment namespace")
+	apiVersion := flagSet.String("apiVersion", "v2alpha1", "experiment api version")
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flagSet.String("kubeconfig", filepath.Join(home, ".kube", "config"), "absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flagSet.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+
+	return &DescribeCmd{
+		flagSet:             flagSet,
+		experimentName:      experimentName,
+		experimentNamespace: experimentNamespace,
+		apiVersion:          apiVersion,
+		kubeconfig:          kubeconfig,
+	}
 }
 
 // parseArgs populates experimentName, experimentNamespace, apiVersion, and kubeconfig variables
@@ -59,18 +82,13 @@ func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-
-	describeCmd := flag.NewFlagSet("describe", flag.ContinueOnError)
-	d.experimentName = describeCmd.String("name", "", "experiment name")
-	d.experimentNamespace = describeCmd.String("namespace", "default", "experiment namespace")
-	d.apiVersion = describeCmd.String("apiVersion", "v2alpha1", "experiment api version")
-	if home := homedir.HomeDir(); home != "" {
-		d.kubeconfig = describeCmd.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		d.kubeconfig = describeCmd.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	// d.logLevel = flag.String("logLevel", "none", "log level: none/panic/fatal/error/warn/info/debug/trace")
+	d.err = d.flagSet.Parse(args)
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
 	}
-	d.err = describeCmd.Parse(args)
-
 	return d
 }
 
@@ -80,11 +98,20 @@ func (d *DescribeCmd) validateName() *DescribeCmd {
 		return d
 	}
 
-	var nameRegex *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]])([[:lower:]]|[[:digit:]]|-|\.){0,253}([[:lower:]]|[[:digit:]])$`)
-	if len(*d.experimentName) == 0 || len(*d.experimentName) > 253 || !nameRegex.MatchString(*d.experimentName) {
-		d.err = errors.New("Invalid experiment name; name should contain no more than 253 characters and only lowercase alphanumeric characters, '-' or '.'; start and end with an alphanumeric character")
+	var namePrefix *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]])`)
+	var nameSuffix *regexp.Regexp = regexp.MustCompile(`([[:lower:]]|[[:digit:]])$`)
+	var nameRegex *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]]|-|\.){1,253}`)
+	if !(namePrefix.MatchString(*d.experimentName) && nameSuffix.MatchString(*d.experimentName) && nameRegex.MatchString(*d.experimentName)) {
+		errMsg := "Invalid experiment name... name should contain no more than 253 characters and only lowercase alphanumeric characters, '-' or '.'... name should start and end with an alphanumeric character"
+		d.err = errors.New(errMsg)
+		fmt.Println(errMsg)
 	}
 
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
+	}
 	return d
 }
 
@@ -94,11 +121,20 @@ func (d *DescribeCmd) validateNamespace() *DescribeCmd {
 		return d
 	}
 
-	var namespaceRegex *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]])([[:lower:]]|[[:digit:]]|-){0,63}([[:lower:]]|[[:digit:]])$`)
-	if len(*d.experimentNamespace) == 0 || len(*d.experimentNamespace) > 63 || !namespaceRegex.MatchString(*d.experimentNamespace) {
-		d.err = errors.New("Invalid experiment namespace; namespace should contain no more than 63 characters and only lowercase alphanumeric characters, or '-'; start and end with an alphanumeric character")
+	var namespacePrefix *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]])`)
+	var namespaceSuffix *regexp.Regexp = regexp.MustCompile(`([[:lower:]]|[[:digit:]])$`)
+	var namespaceRegex *regexp.Regexp = regexp.MustCompile(`^([[:lower:]]|[[:digit:]]|-){1,63}`)
+	if !(namespacePrefix.MatchString(*d.experimentNamespace) && namespaceSuffix.MatchString(*d.experimentNamespace) && namespaceRegex.MatchString(*d.experimentNamespace)) {
+		errMsg := "Invalid experiment namespace... namespace should contain no more than 63 characters and only lowercase alphanumeric characters, or '-'... namespace should start and end with an alphanumeric character"
+		d.err = errors.New(errMsg)
+		fmt.Println(errMsg)
 	}
 
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
+	}
 	return d
 }
 
@@ -110,9 +146,16 @@ func (d *DescribeCmd) validateAPIVersion() *DescribeCmd {
 
 	var apiVersionRegex *regexp.Regexp = regexp.MustCompile(`\bv2alpha1\b`)
 	if !apiVersionRegex.MatchString(*d.apiVersion) {
-		d.err = errors.New("Invalid experiment APIVersion; only allowed value for APIVersion is 'v2alpha1'")
+		errMsg := "Invalid experiment APIVersion... only allowed value for APIVersion is 'v2alpha1'"
+		d.err = errors.New(errMsg)
+		fmt.Println(errMsg)
 	}
 
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
+	}
 	return d
 }
 
@@ -132,7 +175,7 @@ var getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
 	}
 
 	crScheme := runtime.NewScheme()
-	err = v1alpha1.AddToScheme(crScheme)
+	err = v2alpha1.AddToScheme(crScheme)
 	if err != nil {
 		return nil, err
 	}
@@ -152,13 +195,12 @@ func (d *DescribeCmd) setK8sClient() *DescribeCmd {
 		return d
 	}
 
-	var err error
-	d.client, err = getK8sClient(d)
-	if err != nil {
-		d.err = err
-		return d
+	d.client, d.err = getK8sClient(d)
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
 	}
-
 	return d
 }
 
@@ -167,7 +209,20 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-
+	d.experiment = &v2alpha1.Experiment{}
+	d.err = d.client.Get(context.Background(), client.ObjectKey{
+		Namespace: *d.experimentNamespace,
+		Name:      *d.experimentName,
+	}, d.experiment)
+	if d.err != nil {
+		log.WithFields(log.Fields{
+			"msg": d.err,
+		}).Error()
+		fmt.Println("Cannot get experiment object. Ensure you supplied valid arguments to 'iter8ctl describe' command")
+	} else {
+		data, _ := json.MarshalIndent(d.experiment, "", "  ")
+		log.Info("\nGot experiment...\n", string(data))
+	}
 	return d
 }
 
@@ -182,7 +237,7 @@ func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Error("expected 'describe' subcommand")
+		fmt.Println("expected 'describe' subcommand")
 		osExiter.Exit(1)
 	}
 
@@ -192,16 +247,11 @@ func main() {
 		d := describeBuilder()
 		d.parseArgs(os.Args[2:]).validate().setK8sClient().getExperiment().printAnalysis()
 		if d.err != nil {
-			log.WithFields(log.Fields{
-				"error": d.err,
-			}).Error("'describe' command resulted in error")
-			osExiter.Exit(1)
+			d.flagSet.Usage()
 		}
 
 	default:
-		log.WithFields(log.Fields{
-			"subcommand": os.Args[1],
-		}).Error("expected 'describe' subcommand")
+		fmt.Println("expected 'describe' subcommand")
 		osExiter.Exit(1)
 	}
 }
