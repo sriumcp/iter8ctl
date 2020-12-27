@@ -61,14 +61,10 @@ func TestIter8ctl(t *testing.T) {
 			Args: []string{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "apiVersion", "v2alpha1"},
 		},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run("outer", func(t *testing.T) {
 			os.Args = test.Args
-			oldK8sClient := getK8sClient
 			initTest()
 			main()
-			t.Cleanup(func() {
-				getK8sClient = oldK8sClient
-			})
 		})
 	}
 }
@@ -85,7 +81,7 @@ func TestIter8ctlInvalidSubcommand(t *testing.T) {
 			Args: []string{"./iter8ctl", "invalid"},
 		},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run("outer", func(t *testing.T) {
 			initTest()
 			os.Args = test.Args
 			assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
@@ -102,7 +98,7 @@ func TestIter8ctlParseError(t *testing.T) {
 			Args: []string{"./iter8ctl", "describe", "--hello", "world"},
 		},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run("outer", func(t *testing.T) {
 			initTest()
 			os.Args = test.Args
 			assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
@@ -130,7 +126,7 @@ func TestIter8ctlInvalidNames(t *testing.T) {
 			Args: []string{"./iter8ctl", "describe", "-name", "cindrella", "-namespace", "Americano"},
 		},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run("outer", func(t *testing.T) {
 			initTest()
 			os.Args = test.Args
 			assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
@@ -147,7 +143,7 @@ func TestIter8ctlInvalidAPIVersion(t *testing.T) {
 			Args: []string{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha2"},
 		},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run("outer", func(t *testing.T) {
 			initTest()
 			os.Args = test.Args
 			assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
