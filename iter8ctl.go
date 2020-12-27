@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,10 +35,16 @@ var osExiter OSExiter
 // init initializes osExiter and logging
 func init() {
 	osExiter = myOS{}
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
-	log.SetReportCaller(true)
+	logLevel, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		log.SetOutput(ioutil.Discard)
+	} else {
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp: true,
+		})
+		log.SetReportCaller(true)
+		log.SetLevel(logLevel)
+	}
 }
 
 // DescribeCmd allows for building up a describe command in a chained fashion.
@@ -51,13 +58,12 @@ type DescribeCmd struct {
 	kubeconfig          *string
 	client              client.Client
 	experiment          *v2alpha1.Experiment
-	logLevel            *string
 	err                 error
 }
 
 // describeBuilder returns an initial DescribeCmd struct pointer.
 func describeBuilder() *DescribeCmd {
-	flagSet := flag.NewFlagSet("describe", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("describe", flag.ContinueOnError)
 	experimentName := flagSet.String("name", "", "experiment name")
 	experimentNamespace := flagSet.String("namespace", "default", "experiment namespace")
 	apiVersion := flagSet.String("apiVersion", "v2alpha1", "experiment api version")
@@ -82,12 +88,9 @@ func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-	// d.logLevel = flag.String("logLevel", "none", "log level: none/panic/fatal/error/warn/info/debug/trace")
 	d.err = d.flagSet.Parse(args)
 	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
+		d.flagSet.Usage()
 	}
 	return d
 }
@@ -107,11 +110,6 @@ func (d *DescribeCmd) validateName() *DescribeCmd {
 		fmt.Println(errMsg)
 	}
 
-	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
-	}
 	return d
 }
 
@@ -130,11 +128,6 @@ func (d *DescribeCmd) validateNamespace() *DescribeCmd {
 		fmt.Println(errMsg)
 	}
 
-	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
-	}
 	return d
 }
 
@@ -151,23 +144,15 @@ func (d *DescribeCmd) validateAPIVersion() *DescribeCmd {
 		fmt.Println(errMsg)
 	}
 
-	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
-	}
 	return d
 }
 
 // validate validates experimentName, experimentNamespace, and apiVersion
 func (d *DescribeCmd) validate() *DescribeCmd {
-	if d.err != nil {
-		return d
-	}
-
 	return d.validateName().validateNamespace().validateAPIVersion()
 }
 
+// helper function; useful for mocks in tests
 var getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", *d.kubeconfig)
 	if err != nil {
@@ -179,14 +164,24 @@ var getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	log.Trace("Built config for k8s cluster")
 	rc, err := runtimeclient.New(config, client.Options{
 		Scheme: crScheme,
 	})
 	if err != nil {
 		return nil, err
 	}
+	log.Trace("Created runtime client for k8s cluster")
 	return rc, nil
+}
+
+// helper function; useful for mocks in tests
+var setK8sClient = func(d *DescribeCmd) *DescribeCmd {
+	d.client, d.err = getK8sClient(d)
+	if d.err != nil {
+		fmt.Printf("Error setting k8s client: %s\n", d.err)
+	}
+	return d
 }
 
 // setK8sClient sets the clientset variable within DescribeCmd struct
@@ -194,14 +189,7 @@ func (d *DescribeCmd) setK8sClient() *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-
-	d.client, d.err = getK8sClient(d)
-	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
-	}
-	return d
+	return setK8sClient(d)
 }
 
 // getExperiment gets the experiment resource object from the k8s cluster
@@ -215,10 +203,7 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 		Name:      *d.experimentName,
 	}, d.experiment)
 	if d.err != nil {
-		log.WithFields(log.Fields{
-			"msg": d.err,
-		}).Error()
-		fmt.Println("Cannot get experiment object. Ensure you supplied valid arguments to 'iter8ctl describe' command")
+		fmt.Printf("Cannot get experiment object. Error: %s\n", d.err)
 	} else {
 		data, _ := json.MarshalIndent(d.experiment, "", "  ")
 		log.Info("\nGot experiment...\n", string(data))
@@ -247,7 +232,7 @@ func main() {
 		d := describeBuilder()
 		d.parseArgs(os.Args[2:]).validate().setK8sClient().getExperiment().printAnalysis()
 		if d.err != nil {
-			d.flagSet.Usage()
+			osExiter.Exit(1)
 		}
 
 	default:
