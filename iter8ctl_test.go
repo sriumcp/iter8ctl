@@ -1,9 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	v2alpha1 "github.com/iter8-tools/etc3/api/v2alpha1"
@@ -11,140 +13,127 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 )
 
-// Mocking myOS.Exit function
-type myOSMock struct{}
+// Mocking os.Exit function
+type testOS struct{}
 
-func (m myOSMock) Exit(code int) {
+func (t *testOS) Exit(code int) {
 	if code > 0 {
 		panic(fmt.Sprintf("Exiting with error code %v", code))
 	}
 }
 
-// initTestOS registers mock OS lib
+// initTestOS registers the mock OS struct (testOS) defined above
 func initTestOS() {
-	osExiter = myOSMock{}
+	osExiter = &testOS{}
 }
 
-// initTestExperiment registers fake k8s client with access to a pre-built experiment
-func initTestExperiment(experiment *v2alpha1.Experiment) {
-	// mock k8s client
+// Mocking iter8ctlK8sClient.getK8sClient function
+type testK8sClient struct {
+	experiment *v2alpha1.Experiment
+}
+
+func (t *testK8sClient) getK8sClient(kubeconfigPath *string) (runtimeclient.Client, error) {
 	crScheme := k8sruntime.NewScheme()
 	err := v2alpha1.AddToScheme(crScheme)
 	if err != nil {
 		panic("Error while adding to v1alpha1 to new scheme")
 	}
-
-	getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
-		fakeClient := fake.NewFakeClientWithScheme(crScheme)
-		_ = fakeClient.Create(context.Background(), experiment)
-		return fakeClient, nil
+	if t.experiment == nil {
+		return fake.NewFakeClientWithScheme(crScheme), nil
 	}
+	return fake.NewFakeClientWithScheme(crScheme, t.experiment), nil
+}
+
+// initTestK8sClient enables a fake k8s client with access to a pre-built experiment
+func initTestK8sClient(experiment *v2alpha1.Experiment) {
+	k8sClient = &testK8sClient{experiment}
 }
 
 // initTest registers mock OS lib and fake k8s client
-func initTest() {
+func initTestWithMyExp() {
 	initTestOS()
 	experiment := v2alpha1.NewExperiment("myexp", "myns").
 		WithTarget("target").
 		WithStrategy(v2alpha1.StrategyTypeCanary).
 		WithRequestCount("request-count").
 		Build()
-	initTestExperiment(experiment)
+	initTestK8sClient(experiment)
 }
 
-// Unit tests
-// Every invocation of iter8ctl in this test should succeed; specifically, main() should not invoke os.Exit(1)
-func TestIter8ctl(t *testing.T) {
-	for _, test := range []struct {
-		Args   []string
-		Output string
-	}{
-		{
-			Args: []string{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns"},
-		},
-		{
-			Args: []string{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "apiVersion", "v2alpha1"},
-		},
+/* Unit tests */
+
+func TestDescribeBuilder(t *testing.T) {
+	for _, args := range [][]string{
+		{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns"},
+		{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "apiVersion", "v2alpha1"},
 	} {
-		initTest()
-		os.Args = test.Args
+		initTestWithMyExp()
+		os.Args = args
 		assert.NotPanics(t, func() { main() })
 	}
 }
 
-func TestIter8ctlInvalidSubcommand(t *testing.T) {
-	for _, test := range []struct {
-		Args   []string
-		Output string
-	}{
-		{
-			Args: []string{"./iter8ctl"},
-		},
-		{
-			Args: []string{"./iter8ctl", "invalid"},
-		},
+func TestInvalidSubcommand(t *testing.T) {
+	for _, args := range [][]string{
+		{"./iter8ctl"}, {"./iter8ctl", "invalid"},
 	} {
-		initTest()
-		os.Args = test.Args
+		initTestWithMyExp()
+		os.Args = args
 		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
 	}
 }
 
-func TestIter8ctlParseError(t *testing.T) {
-	for _, test := range []struct {
-		Args   []string
-		Output string
-	}{
-		{
-			Args: []string{"./iter8ctl", "describe", "--hello", "world"},
-		},
+func TestParseError(t *testing.T) {
+	for _, args := range [][]string{
+		{"./iter8ctl", "describe", "--hello", "world"},
 	} {
-		initTest()
-		os.Args = test.Args
+		initTestWithMyExp()
+		os.Args = args
 		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
 	}
 }
-func TestIter8ctlInvalidNames(t *testing.T) {
-	for _, test := range []struct {
-		Args   []string
-		Output string
-	}{
-		{
-			Args: []string{"./iter8ctl", "describe", "-name", ""},
-		},
-		{
-			Args: []string{"./iter8ctl", "describe", "-name", "CapitalizedName"},
-		},
-		{
-			Args: []string{"./iter8ctl", "describe", "-name", "namewith*"},
-		},
-		{
-			Args: []string{"./iter8ctl", "describe", "-name", "cindrella", "-namespace", ""},
-		},
-		{
-			Args: []string{"./iter8ctl", "describe", "-name", "cindrella", "-namespace", "Americano"},
-		},
+func TestInvalidNames(t *testing.T) {
+	for _, args := range [][]string{
+		{"./iter8ctl", "describe", "-name", ""},
+		{"./iter8ctl", "describe", "-name", "CapitalizedName"},
+		{"./iter8ctl", "describe", "-name", "namewith*"},
+		{"./iter8ctl", "describe", "-name", "cindrella", "-namespace", ""},
+		{"./iter8ctl", "describe", "-name", "cindrella", "-namespace", "Americano"},
 	} {
-		initTest()
-		os.Args = test.Args
+		initTestWithMyExp()
+		os.Args = args
 		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
 	}
 }
 
-func TestIter8ctlInvalidAPIVersion(t *testing.T) {
-	for _, test := range []struct {
-		Args   []string
-		Output string
-	}{
-		{
-			Args: []string{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha2"},
-		},
+func TestInvalidAPIVersion(t *testing.T) {
+	for _, args := range [][]string{
+		{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha2"},
 	} {
-		initTest()
-		os.Args = test.Args
+		initTestWithMyExp()
+		os.Args = args
 		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
+	}
+}
+
+func TestPrintAnalysis(t *testing.T) {
+	initTestOS()
+	for i := 1; i <= 8; i++ {
+		_, testFilename, _, _ := runtime.Caller(0)
+		expFilename := fmt.Sprintf("experiment%v.yaml", i)
+		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
+		expBytes, _ := ioutil.ReadFile(expFilepath)
+		experiment := v2alpha1.NewExperiment("myexp", "myns").Build()
+		err := yaml.Unmarshal(expBytes, experiment)
+		if err != nil {
+			t.Error(err)
+		}
+		os.Args = []string{"./iter8ctl", "describe", "--name", "sklearn-iris-experiment-1", "--namespace", "kfserving-test"}
+		initTestK8sClient(experiment)
+		assert.NotPanics(t, func() { main() })
 	}
 }
 
