@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -164,14 +163,12 @@ var getK8sClient = func(d *DescribeCmd) (runtimeclient.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Trace("Built config for k8s cluster")
 	rc, err := runtimeclient.New(config, client.Options{
 		Scheme: crScheme,
 	})
 	if err != nil {
 		return nil, err
 	}
-	log.Trace("Created runtime client for k8s cluster")
 	return rc, nil
 }
 
@@ -204,9 +201,6 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	}, d.experiment)
 	if d.err != nil {
 		fmt.Printf("Cannot get experiment object. Error: %s\n", d.err)
-	} else {
-		data, _ := json.MarshalIndent(d.experiment, "", "  ")
-		log.Info("\nGot experiment...\n", string(data))
 	}
 	return d
 }
