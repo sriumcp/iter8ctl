@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -9,7 +10,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	v2alpha1 "github.com/iter8-tools/etc3/api/v2alpha1"
+	"github.com/iter8-tools/iter8ctl/experiment"
+	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
 )
@@ -55,7 +57,7 @@ func init() {
 type DescribeCmd struct {
 	flagSet        *flag.FlagSet
 	experimentPath string
-	experiment     *v2alpha1.Experiment
+	experiment     *experiment.Experiment
 	description    string
 	err            error
 }
@@ -68,7 +70,7 @@ func describeBuilder() *DescribeCmd {
 	var d = &DescribeCmd{
 		flagSet:        flagSet,
 		experimentPath: "",
-		experiment:     &v2alpha1.Experiment{},
+		experiment:     &experiment.Experiment{},
 		description:    "",
 		err:            nil,
 	}
@@ -124,30 +126,91 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	return d
 }
 
+func (d *DescribeCmd) printProgress() *DescribeCmd {
+	d.description += "******\n"
+	d.description += "Experiment name: " + d.experiment.Name + "\n"
+	d.description += "Experiment namespace: " + d.experiment.Namespace + "\n"
+	d.description += "Experiment target: " + d.experiment.Spec.Target + "\n"
+	d.description += "******\n"
+	sta := d.experiment.Status
+	if sta.CompletedIterations == nil || *sta.CompletedIterations == 0 {
+		d.description += "Iteration count: 0\n"
+	} else {
+		d.description += fmt.Sprintf("Iteration count: %v\n", *sta.CompletedIterations)
+	}
+	return d
+}
+
+func (d *DescribeCmd) printWinnerAssessment() *DescribeCmd {
+	if !d.experiment.Started() {
+		d.err = errors.New("printWinnerAssessment invoked for experiment that has not started")
+		return d
+	}
+	wa := d.experiment.Status.Analysis.WinnerAssessment
+	if wa != nil {
+		d.description += "******\n"
+		if wa.Data.WinnerFound {
+			d.description += fmt.Sprintf("Winner: %s\n", *wa.Data.Winner)
+		} else {
+			d.description += "Winner: not found\n"
+		}
+	}
+	return d
+}
+
+func (d *DescribeCmd) printVersionAssessment() *DescribeCmd {
+	if !d.experiment.Started() {
+		d.err = errors.New("printVersionAssessment invoked for experiment that has not started")
+		return d
+	}
+	d.description += "******\n"
+	versions := d.experiment.GetVersions()
+	if d.experiment.RequestCountSpecified() {
+		requestCountStrs, err := d.experiment.GetRequestCountStrs()
+		if err != nil {
+			d.err = err
+			return d
+		}
+		d.description += "Request counts...\n"
+		buf := bytes.Buffer{}
+		table := tablewriter.NewWriter(&buf)
+		table.SetHeader(versions)
+		table.Append(requestCountStrs)
+		table.Render()
+		d.description += buf.String()
+	}
+
+	if len(d.experiment.Spec.Criteria.Objectives) > 0 {
+		// get criteria list
+		// get criteria assessments for versions
+		// print
+	}
+	return d
+}
+
+func (d *DescribeCmd) printMetrics() *DescribeCmd {
+	sta := d.experiment.Status
+	if sta.CompletedIterations == nil || *sta.CompletedIterations == 0 {
+		d.description += "Zero experiment iterations complete.\n"
+	} else {
+		d.description += fmt.Sprintf("%v experiment iterations complete.\n", *sta.CompletedIterations)
+	}
+	return d
+}
+
 // printAnalysis describes the analysis section of the experiment in a human-interpretable format.
 func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-	sta := d.experiment.Status
-	if sta.CompletedIterations == nil {
-		fmt.Fprintf(stdout, "Experiment is yet to begin.")
-	} else {
-		fmt.Fprintf(stdout, "Experiment started. Completed experiment iterations: %v\n", *sta.CompletedIterations)
-
-		if *sta.CompletedIterations > 0 {
-			ana := sta.Analysis
-			// analysis, _ := json.MarshalIndent(ana, "", "  ")
-			// fmt.Fprintln(stdout, string(analysis))
-
-			if ana.WinnerAssessment != nil {
-				if ana.WinnerAssessment.Data.WinnerFound {
-					fmt.Fprintf(stdout, "Winner: %s\n", *ana.WinnerAssessment.Data.Winner)
-				} else {
-					fmt.Fprintln(stdout, "No winner found")
-				}
-			}
-		}
+	d.printProgress()
+	if d.experiment.Started() {
+		d.printWinnerAssessment()
+		d.printVersionAssessment()
+		// d.printMetrics()
+	}
+	if d.err == nil {
+		fmt.Fprintln(stdout, d.description)
 	}
 	return d
 }
