@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
@@ -25,13 +26,21 @@ func (m iter8ctlOS) Exit(code int) {
 
 var osExiter OSExiter
 
-// init initializes logging, osExiter, and flagSet
+// Dependency injection for stdio
+var stdin io.Reader
+var stdout io.Writer
+
+// init initializes stdio, logging, and osExiter
 func init() {
+	// stdio
+	stdin = os.Stdin
+	stdout = os.Stdout
 	// logging
 	logLevel, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err != nil {
 		log.SetOutput(ioutil.Discard)
 	} else {
+		log.SetOutput(os.Stdout)
 		log.SetFormatter(&log.TextFormatter{
 			FullTimestamp: true,
 		})
@@ -92,7 +101,7 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	}
 	var expBytes []byte
 	if *d.experimentPath == "-" {
-		expBytes, d.err = ioutil.ReadAll(os.Stdin)
+		expBytes, d.err = ioutil.ReadAll(stdin)
 	} else {
 		expBytes, d.err = ioutil.ReadFile(*d.experimentPath)
 	}
@@ -123,7 +132,7 @@ func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'describe' subcommand")
+		fmt.Fprintln(stdout, "expected 'describe' subcommand")
 		osExiter.Exit(1)
 	}
 
@@ -133,12 +142,12 @@ func main() {
 		d := describeBuilder()
 		d.parseArgs(os.Args[2:]).getExperiment().printAnalysis()
 		if d.err != nil {
-			fmt.Println(d.err)
+			fmt.Fprintln(stdout, d.err)
 			osExiter.Exit(1)
 		}
 
 	default:
-		fmt.Println("expected 'describe' subcommand")
+		fmt.Fprintln(stdout, "expected 'describe' subcommand")
 		osExiter.Exit(1)
 	}
 }

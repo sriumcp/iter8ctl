@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,6 +26,21 @@ func initTestOS() {
 	osExiter = &testOS{}
 }
 
+// initStdinWithFile populates a byte buffer with input file contents and injects the buffer as stdin
+func initStdinWithFile(filePath string) {
+	data, _ := ioutil.ReadFile(filePath)
+	buffer := bytes.Buffer{}
+	buffer.Write(data)
+	stdin = &buffer
+}
+
+// initStdinWithFile populates a byte buffer with input string and injects the buffer as stdin
+func initStdinWithString(str string) {
+	buffer := bytes.Buffer{}
+	buffer.Write([]byte(str))
+	stdin = &buffer
+}
+
 /* Unit tests */
 
 func TestFilepath(t *testing.T) {
@@ -44,8 +60,7 @@ func TestStdin(t *testing.T) {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
-		data, _ := ioutil.ReadFile(expFilepath)
-		os.Stdout.Write(data)
+		initStdinWithFile(expFilepath)
 		os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 		assert.NotPanics(t, func() { main() })
 	}
@@ -54,7 +69,8 @@ func TestStdin(t *testing.T) {
 func TestInvalidSubcommand(t *testing.T) {
 	initTestOS()
 	for _, args := range [][]string{
-		{"./iter8ctl"}, {"./iter8ctl", "invalid"},
+		{"./iter8ctl"},
+		{"./iter8ctl", "invalid"},
 	} {
 		os.Args = args
 		assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
@@ -63,17 +79,20 @@ func TestInvalidSubcommand(t *testing.T) {
 
 func TestParseError(t *testing.T) {
 	initTestOS()
-	for _, args := range [][]string{
-		{"./iter8ctl", "describe", "--hello", "world"},
-	} {
-		os.Args = args
-		assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
-	}
+	os.Args = []string{"./iter8ctl", "describe", "--hello", "world"}
+	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
+}
+
+func TestInvalidYAML(t *testing.T) {
+	initTestOS()
+	initStdinWithString("abc 123")
+	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
+	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestPrintAnalysis(t *testing.T) {
 	initTestOS()
-	for i := 1; i <= 8; i++ {
+	for i := 1; i <= 1; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
