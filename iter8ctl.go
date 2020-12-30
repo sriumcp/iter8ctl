@@ -54,8 +54,9 @@ func init() {
 // DescribeCmd struct contains all the data needed for the 'describe' subcommand.
 type DescribeCmd struct {
 	flagSet        *flag.FlagSet
-	experimentPath *string
+	experimentPath string
 	experiment     *v2alpha1.Experiment
+	description    string
 	err            error
 }
 
@@ -64,21 +65,22 @@ func describeBuilder() *DescribeCmd {
 	// ContinueOnError enables mocking of os.Exit call in tests with parse errors.
 	var flagSet = flag.NewFlagSet("describe", flag.ContinueOnError)
 
-	var experimentPath string
+	var d = &DescribeCmd{
+		flagSet:        flagSet,
+		experimentPath: "",
+		experiment:     &v2alpha1.Experiment{},
+		description:    "",
+		err:            nil,
+	}
 
 	//setup flagSet
 	const (
 		defaultExperimentPath = ""
 		usage                 = "absolute path to experiment yaml file, or - for console input (stdin)"
 	)
-	flagSet.StringVar(&experimentPath, "f", defaultExperimentPath, usage)
+	flagSet.StringVar(&d.experimentPath, "f", defaultExperimentPath, usage)
 
-	return &DescribeCmd{
-		flagSet:        flagSet,
-		experimentPath: &experimentPath,
-		experiment:     &v2alpha1.Experiment{},
-		err:            nil,
-	}
+	return d
 }
 
 // parseArgs populates experimentName, experimentNamespace, apiVersion, and kubeconfigPath
@@ -100,10 +102,10 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 		return d
 	}
 	var expBytes []byte
-	if *d.experimentPath == "-" {
+	if d.experimentPath == "-" {
 		expBytes, d.err = ioutil.ReadAll(stdin)
 	} else {
-		expBytes, d.err = ioutil.ReadFile(*d.experimentPath)
+		expBytes, d.err = ioutil.ReadFile(d.experimentPath)
 	}
 	if d.err != nil {
 		return d
@@ -126,6 +128,26 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 	if d.err != nil {
 		return d
+	}
+	sta := d.experiment.Status
+	if sta.CompletedIterations == nil {
+		fmt.Fprintf(stdout, "Experiment is yet to begin.")
+	} else {
+		fmt.Fprintf(stdout, "Experiment started. Completed experiment iterations: %v\n", *sta.CompletedIterations)
+
+		if *sta.CompletedIterations > 0 {
+			ana := sta.Analysis
+			// analysis, _ := json.MarshalIndent(ana, "", "  ")
+			// fmt.Fprintln(stdout, string(analysis))
+
+			if ana.WinnerAssessment != nil {
+				if ana.WinnerAssessment.Data.WinnerFound {
+					fmt.Fprintf(stdout, "Winner: %s\n", *ana.WinnerAssessment.Data.Winner)
+				} else {
+					fmt.Fprintln(stdout, "No winner found")
+				}
+			}
+		}
 	}
 	return d
 }
