@@ -119,6 +119,20 @@ func TestInvalidAPIVersion(t *testing.T) {
 	}
 }
 
+func TestInvalidKubeconfigPath(t *testing.T) {
+	_, testFilename, _, _ := runtime.Caller(0)
+	kubeconfigPath := filepath.Join(filepath.Dir(testFilename), "testdata", "kubeconfig")
+	for _, args := range [][]string{
+		{"./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha1", "--kubeconfigPath", kubeconfigPath},
+	} {
+		initTestOS()
+		os.Args = args
+		d := describeBuilder(&iter8ctlK8sClient{})
+		d.parseArgs(os.Args[2:]).validate().setK8sClient()
+		assert.Error(t, d.err)
+	}
+}
+
 func TestPrintAnalysis(t *testing.T) {
 	initTestOS()
 	for i := 1; i <= 8; i++ {
@@ -126,7 +140,7 @@ func TestPrintAnalysis(t *testing.T) {
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
 		expBytes, _ := ioutil.ReadFile(expFilepath)
-		experiment := v2alpha1.NewExperiment("myexp", "myns").Build()
+		experiment := &v2alpha1.Experiment{}
 		err := yaml.Unmarshal(expBytes, experiment)
 		if err != nil {
 			t.Error(err)

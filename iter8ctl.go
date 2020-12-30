@@ -39,13 +39,12 @@ type K8sClient interface {
 type iter8ctlK8sClient struct{}
 
 func (k iter8ctlK8sClient) getK8sClient(kubeconfigPath *string) (runtimeclient.Client, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfigPath)
+	crScheme := runtime.NewScheme()
+	err := v2alpha1.AddToScheme(crScheme)
 	if err != nil {
 		return nil, err
 	}
-
-	crScheme := runtime.NewScheme()
-	err = v2alpha1.AddToScheme(crScheme)
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
