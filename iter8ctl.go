@@ -87,8 +87,12 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	if d.err != nil {
 		return d
 	}
-	expBytes, err := ioutil.ReadFile(*d.experimentPath)
-	d.err = err
+	var expBytes []byte
+	if *d.experimentPath == "-" {
+		expBytes, d.err = ioutil.ReadAll(os.Stdin)
+	} else {
+		expBytes, d.err = ioutil.ReadFile(*d.experimentPath)
+	}
 	if d.err != nil {
 		return d
 	}
