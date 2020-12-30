@@ -35,7 +35,7 @@ type testK8sClient struct {
 	experiment *v2alpha1.Experiment
 }
 
-func (t *testK8sClient) getK8sClient(kubeconfigPath *string) (runtimeclient.Client, error) {
+func (t testK8sClient) getK8sClient(kubeconfigPath *string) (runtimeclient.Client, error) {
 	crScheme := k8sruntime.NewScheme()
 	err := v2alpha1.AddToScheme(crScheme)
 	if err != nil {
