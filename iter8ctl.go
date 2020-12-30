@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -51,16 +52,17 @@ type DescribeCmd struct {
 
 // describeBuilder returns an initial DescribeCmd struct pointer.
 func describeBuilder() *DescribeCmd {
+	// ContinueOnError enables mocking of os.Exit call in tests with parse errors.
 	var flagSet = flag.NewFlagSet("describe", flag.ContinueOnError)
 
 	var experimentPath string
 
 	//setup flagSet
 	const (
-		defaultExperimentPath = "-"
-		usage                 = "absolute path to experiment yaml filename or - for console input (stdin)"
+		defaultExperimentPath = ""
+		usage                 = "absolute path to experiment yaml file, or - for console input (stdin)"
 	)
-	flagSet.StringVar(&experimentPath, "e", defaultExperimentPath, usage)
+	flagSet.StringVar(&experimentPath, "f", defaultExperimentPath, usage)
 
 	return &DescribeCmd{
 		flagSet:        flagSet,
@@ -78,6 +80,7 @@ func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
 	d.err = d.flagSet.Parse(args)
 	if d.err != nil {
 		d.flagSet.Usage()
+		osExiter.Exit(1)
 	}
 	return d
 }
@@ -99,10 +102,12 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	expBytesJSON, err := yaml.YAMLToJSON(expBytes)
 	d.err = err
 	if d.err != nil {
+		d.err = errors.New("YAML to JSON conversion error... this could be due to invalid YAML input")
 		return d
 	}
 	d.err = json.Unmarshal(expBytesJSON, d.experiment)
 	if d.err != nil {
+		d.err = errors.New("unmarshal error... this could be due to invalid experiment YAML input")
 		return d
 	}
 	return d
@@ -128,6 +133,7 @@ func main() {
 		d := describeBuilder()
 		d.parseArgs(os.Args[2:]).getExperiment().printAnalysis()
 		if d.err != nil {
+			fmt.Println(d.err)
 			osExiter.Exit(1)
 		}
 

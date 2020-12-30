@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +16,7 @@ type testOS struct{}
 
 func (t *testOS) Exit(code int) {
 	if code > 0 {
-		panic(fmt.Sprintf("Exiting with error code %v", code))
+		panic("Exiting with non-zero error code")
 	}
 }
 
@@ -26,13 +27,26 @@ func initTestOS() {
 
 /* Unit tests */
 
-func TestDescribeBuilder(t *testing.T) {
+func TestFilepath(t *testing.T) {
 	initTestOS()
 	for i := 1; i <= 8; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
-		os.Args = []string{"./iter8ctl", "describe", "-e", expFilepath}
+		os.Args = []string{"./iter8ctl", "describe", "-f", expFilepath}
+		assert.NotPanics(t, func() { main() })
+	}
+}
+
+func TestStdin(t *testing.T) {
+	initTestOS()
+	for i := 1; i <= 8; i++ {
+		_, testFilename, _, _ := runtime.Caller(0)
+		expFilename := fmt.Sprintf("experiment%v.yaml", i)
+		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
+		data, _ := ioutil.ReadFile(expFilepath)
+		os.Stdout.Write(data)
+		os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 		assert.NotPanics(t, func() { main() })
 	}
 }
@@ -43,7 +57,7 @@ func TestInvalidSubcommand(t *testing.T) {
 		{"./iter8ctl"}, {"./iter8ctl", "invalid"},
 	} {
 		os.Args = args
-		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
+		assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 	}
 }
 
@@ -53,7 +67,7 @@ func TestParseError(t *testing.T) {
 		{"./iter8ctl", "describe", "--hello", "world"},
 	} {
 		os.Args = args
-		assert.PanicsWithValue(t, "Exiting with error code 1", func() { main() })
+		assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 	}
 }
 
@@ -63,7 +77,7 @@ func TestPrintAnalysis(t *testing.T) {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
-		os.Args = []string{"./iter8ctl", "describe", "-e", expFilepath}
+		os.Args = []string{"./iter8ctl", "describe", "-f", expFilepath}
 		assert.NotPanics(t, func() { main() })
 	}
 }
