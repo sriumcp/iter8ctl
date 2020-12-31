@@ -17,6 +17,7 @@ import (
 )
 
 // OSExiter interface enables exiting the current program.
+// The inferface is useful in tests to mock OS.exit function with GO's panic function.
 type OSExiter interface {
 	Exit(code int)
 }
@@ -209,6 +210,7 @@ func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 	return d
 }
 
+// main serves as the program entry point.
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(stdout, "expected 'describe' subcommand")
