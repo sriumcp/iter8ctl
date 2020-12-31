@@ -85,14 +85,27 @@ func TestParseError(t *testing.T) {
 
 func TestInvalidYAML(t *testing.T) {
 	initTestOS()
-	initStdinWithString("abc 123")
+	initStdinWithString("playing_playlist: {{ action }} playlist {{ playlist_name }}")
+	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
+	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
+}
+
+func TestInvalidFile(t *testing.T) {
+	initTestOS()
+	os.Args = []string{"./iter8ctl", "describe", "-f", "abc123xyz789.yaml.json"}
+	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
+}
+
+func TestInvalidExperimentYAML(t *testing.T) {
+	initTestOS()
+	initStdinWithString("abc")
 	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestPrintAnalysis(t *testing.T) {
 	initTestOS()
-	for i := 1; i <= 1; i++ {
+	for i := 1; i <= 9; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
 		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)

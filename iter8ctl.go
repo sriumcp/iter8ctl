@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -9,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/olekukonko/tablewriter"
@@ -87,9 +87,6 @@ func describeBuilder() *DescribeCmd {
 
 // parseArgs populates experimentName, experimentNamespace, apiVersion, and kubeconfigPath
 func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
-	if d.err != nil {
-		return d
-	}
 	d.err = d.flagSet.Parse(args)
 	if d.err != nil {
 		d.flagSet.Usage()
@@ -100,9 +97,6 @@ func (d *DescribeCmd) parseArgs(args []string) *DescribeCmd {
 
 // getExperiment gets the experiment resource object from the k8s cluster
 func (d *DescribeCmd) getExperiment() *DescribeCmd {
-	if d.err != nil {
-		return d
-	}
 	var expBytes []byte
 	if d.experimentPath == "-" {
 		expBytes, d.err = ioutil.ReadAll(stdin)
@@ -126,75 +120,75 @@ func (d *DescribeCmd) getExperiment() *DescribeCmd {
 	return d
 }
 
+// printProgress prints the progress of the experiment into the description buffer (d.description)
 func (d *DescribeCmd) printProgress() *DescribeCmd {
 	d.description += "******\n"
 	d.description += "Experiment name: " + d.experiment.Name + "\n"
 	d.description += "Experiment namespace: " + d.experiment.Namespace + "\n"
 	d.description += "Experiment target: " + d.experiment.Spec.Target + "\n"
-	d.description += "******\n"
+	d.description += "\n******\n"
 	sta := d.experiment.Status
 	if sta.CompletedIterations == nil || *sta.CompletedIterations == 0 {
-		d.description += "Iteration count: 0\n"
+		d.description += "Number of completed iterations: 0\n"
 	} else {
-		d.description += fmt.Sprintf("Iteration count: %v\n", *sta.CompletedIterations)
+		d.description += fmt.Sprintf("Number of completed iterations: %v\n", *sta.CompletedIterations)
 	}
 	return d
 }
 
+// printProgress prints winner assessment into the description buffer (d.description)
 func (d *DescribeCmd) printWinnerAssessment() *DescribeCmd {
-	if !d.experiment.Started() {
-		d.err = errors.New("printWinnerAssessment invoked for experiment that has not started")
-		return d
-	}
 	wa := d.experiment.Status.Analysis.WinnerAssessment
 	if wa != nil {
-		d.description += "******\n"
+		d.description += "\n******\n"
 		if wa.Data.WinnerFound {
-			d.description += fmt.Sprintf("Winner: %s\n", *wa.Data.Winner)
+			d.description += fmt.Sprintf("Winning version: %s\n", *wa.Data.Winner)
 		} else {
-			d.description += "Winner: not found\n"
+			d.description += "Winning version: not found\n"
 		}
 	}
 	return d
 }
 
-func (d *DescribeCmd) printVersionAssessment() *DescribeCmd {
-	if !d.experiment.Started() {
-		d.err = errors.New("printVersionAssessment invoked for experiment that has not started")
-		return d
-	}
-	d.description += "******\n"
+// printObjectiveAssessments is a helper function to print objective assessments for versions into the description buffer (d.description)
+func (d *DescribeCmd) printObjectiveAssessments() {
+	d.description += "\n******\n"
+	d.description += "Objectives\n"
+	buf := &strings.Builder{}
+	table := tablewriter.NewWriter(buf)
+	table.SetRowLine(true)
 	versions := d.experiment.GetVersions()
-	if d.experiment.RequestCountSpecified() {
-		requestCountStrs, err := d.experiment.GetRequestCountStrs()
-		if err != nil {
-			d.err = err
-			return d
-		}
-		d.description += "Request counts...\n"
-		buf := bytes.Buffer{}
-		table := tablewriter.NewWriter(&buf)
-		table.SetHeader(versions)
-		table.Append(requestCountStrs)
-		table.Render()
-		d.description += buf.String()
+	table.SetHeader(append([]string{"Objective"}, versions...))
+	for i, objective := range d.experiment.Spec.Criteria.Objectives {
+		row := []string{experiment.StringifyObjective(objective)}
+		table.Append(append(row, d.experiment.GetSatisfyStrs(i)...))
 	}
+	table.Render()
+	d.description += buf.String()
+}
 
+// printVersionAssessment prints request counts and criteria assessments into the description buffer (d.description)
+func (d *DescribeCmd) printVersionAssessment() *DescribeCmd {
 	if len(d.experiment.Spec.Criteria.Objectives) > 0 {
-		// get criteria list
-		// get criteria assessments for versions
-		// print
+		d.printObjectiveAssessments()
 	}
 	return d
 }
 
 func (d *DescribeCmd) printMetrics() *DescribeCmd {
-	sta := d.experiment.Status
-	if sta.CompletedIterations == nil || *sta.CompletedIterations == 0 {
-		d.description += "Zero experiment iterations complete.\n"
-	} else {
-		d.description += fmt.Sprintf("%v experiment iterations complete.\n", *sta.CompletedIterations)
+	d.description += "\n******\n"
+	d.description += "Metrics\n"
+	buf := &strings.Builder{}
+	table := tablewriter.NewWriter(buf)
+	table.SetRowLine(true)
+	versions := d.experiment.GetVersions()
+	table.SetHeader(append([]string{"Metric"}, versions...))
+	for _, metricInfo := range d.experiment.Spec.Metrics {
+		row := []string{experiment.GetMetricNameAndUnits(metricInfo)}
+		table.Append(append(row, d.experiment.GetMetricValueStrs(metricInfo.Name)...))
 	}
+	table.Render()
+	d.description += buf.String()
 	return d
 }
 
@@ -207,7 +201,7 @@ func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 	if d.experiment.Started() {
 		d.printWinnerAssessment()
 		d.printVersionAssessment()
-		// d.printMetrics()
+		d.printMetrics()
 	}
 	if d.err == nil {
 		fmt.Fprintln(stdout, d.description)
