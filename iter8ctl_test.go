@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,10 +42,16 @@ func initStdinWithString(str string) {
 	stdin = &buffer
 }
 
+// redirectStdout redirects stdout to a string buffer
+func redirectStdout() {
+	stdout = &strings.Builder{}
+}
+
 /* Unit tests */
 
 func TestFilepath(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	for i := 1; i <= 8; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
@@ -56,6 +63,7 @@ func TestFilepath(t *testing.T) {
 
 func TestStdin(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	for i := 1; i <= 8; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
@@ -68,6 +76,7 @@ func TestStdin(t *testing.T) {
 
 func TestInvalidSubcommand(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	for _, args := range [][]string{
 		{"./iter8ctl"},
 		{"./iter8ctl", "invalid"},
@@ -79,12 +88,14 @@ func TestInvalidSubcommand(t *testing.T) {
 
 func TestParseError(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	os.Args = []string{"./iter8ctl", "describe", "--hello", "world"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestInvalidYAML(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	initStdinWithString("playing_playlist: {{ action }} playlist {{ playlist_name }}")
 	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
@@ -92,6 +103,7 @@ func TestInvalidYAML(t *testing.T) {
 
 func TestInvalidFile(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	os.Args = []string{"./iter8ctl", "describe", "-f", "abc123xyz789.yaml.json"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
@@ -99,12 +111,14 @@ func TestInvalidFile(t *testing.T) {
 func TestInvalidExperimentYAML(t *testing.T) {
 	initTestOS()
 	initStdinWithString("abc")
+	redirectStdout()
 	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestPrintAnalysis(t *testing.T) {
 	initTestOS()
+	redirectStdout()
 	for i := 1; i <= 9; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
@@ -113,67 +127,3 @@ func TestPrintAnalysis(t *testing.T) {
 		assert.NotPanics(t, func() { main() })
 	}
 }
-
-// // Integration tests
-// func execExitingCommand(cmd *exec.Cmd) (string, error) {
-// 	var out bytes.Buffer
-// 	cmd.Stderr = &out
-// 	err := cmd.Run()
-// 	actualOutput := fmt.Sprintf("%s", &out)
-// 	return actualOutput, err
-// }
-
-// func postProcess(t *testing.T, actualOutput string, expectedOutput string, err error) {
-// 	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-// 		if strings.Contains(actualOutput, expectedOutput) {
-// 			return
-// 		}
-// 		t.Logf("expected substring in output: %s", expectedOutput)
-// 		t.Fatalf("actual output: %s", actualOutput)
-// 	}
-// 	t.Fatalf("process ran with err %v, want exit status 1", err)
-// }
-
-// func TestIter8ctlInvalidSubcommandIntegration(t *testing.T) {
-// 	expectedOutput := "expected 'describe' subcommand"
-
-// 	cmd := exec.Command("./iter8ctl")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "invalid")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }
-
-// func TestIter8ctlInvalidNamesIntegration(t *testing.T) {
-// 	expectedOutput := "expected a valid value for (experiment) name and namespace."
-
-// 	cmd := exec.Command("./iter8ctl", "describe", "-name", "")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "CapitalizedName")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "namewith*")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "cindrella", "-namespace", "")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "cindrella", "-namespace", "Americano")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }
-
-// func TestIter8ctlInvalidAPIVersionIntegration(t *testing.T) {
-// 	expectedOutput := "expected a valid value for (experiment) api version."
-
-// 	cmd := exec.Command("./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha2")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }

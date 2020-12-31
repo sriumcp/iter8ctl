@@ -2,40 +2,39 @@
 [![Coverage](https://codecov.io/gh/sriumcp/iter8ctl/branch/main/graphs/badge.svg?branch=main)](https://codecov.io/gh/sriumcp/iter8ctl)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 <!-- [![GoDoc](https://godoc.org/iter8-tools/iter8ctl?status.svg)](https://godoc.org/iter8-tools/iter8ctl) -->
-------
 # Iter8ctl
 Iter8 command line utility for service operators to understand and diagnose their iter8 experiments.
 
-Iter8ctl can be used with [iter8-kfserving](https://github.com/iter8-tools/iter8-kfserving).
+Iter8ctl can be used with [iter8-kfserving](https://github.com/iter8-tools/iter8-kfserving) experiments.
 
-## Installation
+# Installation
 ```
 GOBIN=/usr/local/bin go install github.com/iter8-tools/iter8ctl
 ```
 The above command installs `iter8ctl` under the `/usr/local/bin` directory. To install under a different directory, change the value of `GOBIN` above.
 
-### Removal
+## Removal
 ```
 rm <path-to-install-directory>/iter8ctl
 ```
 
-## Usage
+# Usage
 
-### Example 1
+## Example 1
 Describe an iter8 Experiment resource object present in your Kubernetes cluster.
 ```shell
 kubectl get experiment sklearn-iris-experiment-1 -n kfserving-test -o yaml > experiment.yaml
 iter8ctl describe -f experiment.yaml
 ```
 
-### Example 2
+## Example 2
 Supply experiment YAML using console input.
 ```shell
 kubectl get experiment sklearn-iris-experiment-1 -n kfserving-test -o yaml > experiment.yaml
 cat experiment.yaml | iter8ctl describe -f -
 ```
 
-### Example 3
+## Example 3
 Periodically fetch an iter8 Experiment resource object present in your Kubernetes cluster and describe it. You can change the frequency by adjusting the sleep interval below.
 ```shell
 while clear; do
@@ -44,7 +43,7 @@ while clear; do
 done
 ```
 
-## Sample Output
+# Sample Output
 The following is the output of executing `iter8ctl describe -f testdata/experiment8.yaml`; the `testdata` folder is part of the [iter8ctl GitHub repo](https://github.com/iter8-tools/iter8ctl) and contains sample experiments used in tests.
 
 ```shell
@@ -85,6 +84,6 @@ Metrics
 +--------------------------------+---------------+---------------+
 ```
 
-## Contributing
+# Contributing
 
 Documentation and code PRs are welcome. When contributing to this repository, please first discuss the change you wish to make using [Issues](https://github.com/iter8-tools/iter8ctl/issues), [Discussion](https://github.com/iter8-tools/iter8ctl/discussions), or [Slack](https://join.slack.com/t/iter8-tools/shared_invite/enQtODU0NTczMTQ5NDU4LTJmNGE1OTBhOWI4NzllZGE0ZjdhM2M3MzJlMjcxYjliMTJlM2YxMzQ4OWQ5NGViYTM2MTU4MWRkZTgxNzZiMzg).

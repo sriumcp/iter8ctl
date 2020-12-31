@@ -32,12 +32,14 @@ var osExiter OSExiter
 // Dependency injection for stdio
 var stdin io.Reader
 var stdout io.Writer
+var stderr io.Writer
 
 // init initializes stdio, logging, and osExiter
 func init() {
 	// stdio
 	stdin = os.Stdin
 	stdout = os.Stdout
+	stderr = os.Stderr
 	// logging
 	logLevel, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err != nil {
@@ -212,23 +214,25 @@ func (d *DescribeCmd) printAnalysis() *DescribeCmd {
 
 // main serves as the program entry point.
 func main() {
+	d := describeBuilder()
 	if len(os.Args) < 2 {
-		fmt.Fprintln(stdout, "expected 'describe' subcommand")
+		fmt.Fprintln(stderr, "expected 'describe' subcommand")
+		d.flagSet.Usage()
 		osExiter.Exit(1)
 	}
 
 	switch os.Args[1] {
 
 	case "describe":
-		d := describeBuilder()
 		d.parseArgs(os.Args[2:]).getExperiment().printAnalysis()
 		if d.err != nil {
-			fmt.Fprintln(stdout, d.err)
+			fmt.Fprintln(stderr, d.err)
 			osExiter.Exit(1)
 		}
 
 	default:
-		fmt.Fprintln(stdout, "expected 'describe' subcommand")
+		fmt.Fprintln(stderr, "expected 'describe' subcommand")
+		d.flagSet.Usage()
 		osExiter.Exit(1)
 	}
 }
