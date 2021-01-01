@@ -27,7 +27,7 @@ type Cmd struct {
 	Usage          func()
 }
 
-// Builder returns an initial Cmd struct pointer.
+// Builder returns an initialized Cmd struct pointer.
 func Builder(stdin io.Reader, stdout io.Writer, stderr io.Writer) *Cmd {
 	// ContinueOnError ensures flagSet does not ExitOnError
 	var flagSet = flag.NewFlagSet("describe", flag.ContinueOnError)
@@ -55,12 +55,12 @@ func Builder(stdin io.Reader, stdout io.Writer, stderr io.Writer) *Cmd {
 	return d
 }
 
-// Error returns any error accumulated by Cmd so far
+// Error returns any error accumulated by Cmd so far.
 func (d *Cmd) Error() error {
 	return d.err
 }
 
-// ParseArgs populates experimentName, experimentNamespace, apiVersion, and kubeconfigPath
+// ParseArgs populates d.experimentPath.
 func (d *Cmd) ParseArgs(args []string) *Cmd {
 	if d.err != nil {
 		return d
@@ -76,7 +76,9 @@ func (d *Cmd) ParseArgs(args []string) *Cmd {
 	return d
 }
 
-// GetExperiment gets the experiment resource object from the k8s cluster
+// GetExperiment populates d.experiment from an input file or from stdin input.
+// Input should be valid experiment YAML.
+// If input is invalid, GetExperiment sets an error in d.err.
 func (d *Cmd) GetExperiment() *Cmd {
 	if d.err != nil {
 		return d
@@ -108,8 +110,8 @@ func (d *Cmd) GetExperiment() *Cmd {
 	return d
 }
 
-// printProgress prints the progress of the experiment into the description buffer (d.description)
-func (d *Cmd) printProgress() *Cmd {
+// PrintProgress prints name, namespace, and target of the experiment and the number of completed iterations.
+func (d *Cmd) PrintProgress() *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -127,77 +129,93 @@ func (d *Cmd) printProgress() *Cmd {
 	return d
 }
 
-// printProgress prints winner assessment into the description buffer (d.description)
-func (d *Cmd) printWinnerAssessment() *Cmd {
+// PrintWinnerAssessment prints the winning version in the experiment, if Status.Analysis.WinnerAssessment is not nil in the experiment object.
+func (d *Cmd) PrintWinnerAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
-	wa := d.experiment.Status.Analysis.WinnerAssessment
-	if wa != nil {
-		d.description.WriteString("\n******\n")
-		if wa.Data.WinnerFound {
-			d.description.WriteString(fmt.Sprintf("Winning version: %s\n", *wa.Data.Winner))
-		} else {
-			d.description.WriteString("Winning version: not found\n")
+	if a := d.experiment.Status.Analysis; a != nil {
+		if w := a.WinnerAssessment; w != nil {
+			d.description.WriteString("\n******\n")
+			if w.Data.WinnerFound {
+				d.description.WriteString(fmt.Sprintf("Winning version: %s\n", *w.Data.Winner))
+			} else {
+				d.description.WriteString("Winning version: not found\n")
+			}
 		}
 	}
 	return d
 }
 
-// printObjectiveAssessments is a helper function to print objective assessments for versions into the description buffer (d.description)
-func (d *Cmd) printObjectiveAssessments() {
-	d.description.WriteString("\n******\n")
-	d.description.WriteString("Objectives\n")
-	table := tablewriter.NewWriter(&d.description)
-	table.SetRowLine(true)
-	versions := d.experiment.GetVersions()
-	table.SetHeader(append([]string{"Objective"}, versions...))
-	for i, objective := range d.experiment.Spec.Criteria.Objectives {
-		row := []string{experiment.StringifyObjective(objective)}
-		table.Append(append(row, d.experiment.GetSatisfyStrs(i)...))
-	}
-	table.Render()
-}
-
-// printVersionAssessment prints request counts and criteria assessments into the description buffer (d.description)
-func (d *Cmd) printVersionAssessment() *Cmd {
+// PrintObjectiveAssessment prints a matrix of boolean values, if Status.Analysis.VersionAssessments is not nil in the experiment object.
+// Rows correspond to experiment objectives, columns correspond to versions, and entry [i, j] indicates if version j satisfies objective i.
+// Objective assessments are printed in the same sequence as in the experiment's spec.criteria.objectives section.
+func (d *Cmd) PrintObjectiveAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
-	if len(d.experiment.Spec.Criteria.Objectives) > 0 {
-		d.printObjectiveAssessments()
+	if a := d.experiment.Status.Analysis; a != nil {
+		if v := a.VersionAssessments; v != nil {
+			d.description.WriteString("\n******\n")
+			d.description.WriteString("Objectives\n")
+			table := tablewriter.NewWriter(&d.description)
+			table.SetRowLine(true)
+			versions := d.experiment.GetVersions()
+			table.SetHeader(append([]string{"Objective"}, versions...))
+			for i, objective := range d.experiment.Spec.Criteria.Objectives {
+				row := []string{experiment.StringifyObjective(objective)}
+				table.Append(append(row, d.experiment.GetSatisfyStrs(i)...))
+			}
+			table.Render()
+		}
 	}
 	return d
 }
 
-func (d *Cmd) printMetrics() *Cmd {
+// PrintVersionAssessment prints how each version is performing with respect to experiment criteria.
+func (d *Cmd) PrintVersionAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
-	d.description.WriteString("\n******\n")
-	d.description.WriteString("Metrics\n")
-	table := tablewriter.NewWriter(&d.description)
-	table.SetRowLine(true)
-	versions := d.experiment.GetVersions()
-	table.SetHeader(append([]string{"Metric"}, versions...))
-	for _, metricInfo := range d.experiment.Spec.Metrics {
-		row := []string{experiment.GetMetricNameAndUnits(metricInfo)}
-		table.Append(append(row, d.experiment.GetMetricValueStrs(metricInfo.Name)...))
+	if c := d.experiment.Spec.Criteria; c != nil && len(c.Objectives) > 0 {
+		d.PrintObjectiveAssessment()
 	}
-	table.Render()
 	return d
 }
 
-// PrintAnalysis describes the analysis section of the experiment in a human-interpretable format.
+// PrintMetrics prints a matrix of decimal values.
+// Rows correspond to experiment metrics, columns correspond to versions, and entry [i, j] indicates the value of metric i for version j.
+// Metrics are in the same sequence as in the experiment's spec.metrics section.
+func (d *Cmd) PrintMetrics() *Cmd {
+	if d.err != nil {
+		return d
+	}
+	if a := d.experiment.Status.Analysis; a != nil {
+		if v := a.AggregatedMetrics; v != nil {
+			d.description.WriteString("\n******\n")
+			d.description.WriteString("Metrics\n")
+			table := tablewriter.NewWriter(&d.description)
+			table.SetRowLine(true)
+			versions := d.experiment.GetVersions()
+			table.SetHeader(append([]string{"Metric"}, versions...))
+			for _, metricInfo := range d.experiment.Spec.Metrics {
+				row := []string{experiment.GetMetricNameAndUnits(metricInfo)}
+				table.Append(append(row, d.experiment.GetMetricValueStrs(metricInfo.Name)...))
+			}
+			table.Render()
+		}
+	}
+	return d
+}
+
+// PrintAnalysis describes the experiment by printing progress, winner and version assessments, and metrics.
 func (d *Cmd) PrintAnalysis() *Cmd {
 	if d.err != nil {
 		return d
 	}
-	d.printProgress()
+	d.PrintProgress()
 	if d.experiment.Started() {
-		d.printWinnerAssessment()
-		d.printVersionAssessment()
-		d.printMetrics()
+		d.PrintWinnerAssessment().PrintVersionAssessment().PrintMetrics()
 	}
 	if d.err == nil {
 		fmt.Fprintln(d.stdout, d.description.String())

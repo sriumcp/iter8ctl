@@ -3,25 +3,18 @@ package main
 import (
 	"io/ioutil"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/iter8-tools/iter8ctl/utils"
 	"github.com/stretchr/testify/assert"
 )
-
-// completePath is a helper function for converting relative file paths to absolute ones
-func completePath(prefix string, suffix string) string {
-	_, testFilename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(testFilename), prefix, suffix)
-}
 
 /* CLI tests */
 
 func TestCLI(t *testing.T) {
 	// All subtests within this test rely in ./iter8ctl. So go build.
-	exec.Command("go", "build", completePath("", "")).Run()
+	exec.Command("go", "build", utils.CompletePath("", "")).Run()
 
 	type test struct {
 		name           string   // name of this test
@@ -34,15 +27,15 @@ func TestCLI(t *testing.T) {
 		{name: "no-flags", flags: []string{}, outputFilename: "", errorFilename: "error-no-flags.txt"},
 		{name: "invalid-subcommand", flags: []string{"invalid"}, outputFilename: "", errorFilename: "error-invalid-subcommand.txt"},
 		{name: "undefined-flag", flags: []string{"describe", "-name", "helloworld"}, outputFilename: "", errorFilename: "error-undefined-flag.txt"},
-		{name: "experiment1", flags: []string{"describe", "-f", completePath("testdata", "experiment1.yaml")}, outputFilename: "experiment1.out", errorFilename: ""},
-		{name: "experiment2", flags: []string{"describe", "-f", completePath("testdata", "experiment2.yaml")}, outputFilename: "experiment2.out", errorFilename: ""},
-		{name: "experiment3", flags: []string{"describe", "-f", completePath("testdata", "experiment3.yaml")}, outputFilename: "experiment3.out", errorFilename: ""},
-		{name: "experiment4", flags: []string{"describe", "-f", completePath("testdata", "experiment4.yaml")}, outputFilename: "experiment4.out", errorFilename: ""},
-		{name: "experiment5", flags: []string{"describe", "-f", completePath("testdata", "experiment5.yaml")}, outputFilename: "experiment5.out", errorFilename: ""},
-		{name: "experiment6", flags: []string{"describe", "-f", completePath("testdata", "experiment6.yaml")}, outputFilename: "experiment6.out", errorFilename: ""},
-		{name: "experiment7", flags: []string{"describe", "-f", completePath("testdata", "experiment7.yaml")}, outputFilename: "experiment7.out", errorFilename: ""},
-		{name: "experiment8", flags: []string{"describe", "-f", completePath("testdata", "experiment8.yaml")}, outputFilename: "experiment8.out", errorFilename: ""},
-		{name: "experiment9", flags: []string{"describe", "-f", completePath("testdata", "experiment9.yaml")}, outputFilename: "experiment9.out", errorFilename: ""},
+		{name: "experiment1", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment1.yaml")}, outputFilename: "experiment1.out", errorFilename: ""},
+		{name: "experiment2", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment2.yaml")}, outputFilename: "experiment2.out", errorFilename: ""},
+		{name: "experiment3", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment3.yaml")}, outputFilename: "experiment3.out", errorFilename: ""},
+		{name: "experiment4", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment4.yaml")}, outputFilename: "experiment4.out", errorFilename: ""},
+		{name: "experiment5", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment5.yaml")}, outputFilename: "experiment5.out", errorFilename: ""},
+		{name: "experiment6", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment6.yaml")}, outputFilename: "experiment6.out", errorFilename: ""},
+		{name: "experiment7", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment7.yaml")}, outputFilename: "experiment7.out", errorFilename: ""},
+		{name: "experiment8", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment8.yaml")}, outputFilename: "experiment8.out", errorFilename: ""},
+		{name: "experiment9", flags: []string{"describe", "-f", utils.CompletePath("testdata", "experiment9.yaml")}, outputFilename: "experiment9.out", errorFilename: ""},
 	}
 
 	for _, tc := range tests {
@@ -57,7 +50,8 @@ func TestCLI(t *testing.T) {
 
 			if tc.errorFilename != "" {
 				assert.Error(t, cmd.Run())
-				b3, err := ioutil.ReadFile(completePath("testdata", tc.errorFilename))
+				t.Log("Reading error file: ", utils.CompletePath("testdata", tc.errorFilename))
+				b3, err := ioutil.ReadFile(utils.CompletePath("testdata", tc.errorFilename))
 				if err != nil {
 					t.Fatal("Unable to read error file contents")
 				}
@@ -67,7 +61,8 @@ func TestCLI(t *testing.T) {
 			}
 
 			if tc.outputFilename != "" {
-				b4, err := ioutil.ReadFile(completePath("testdata", tc.outputFilename))
+				t.Log("Reading output file: ", utils.CompletePath("testdata", tc.outputFilename))
+				b4, err := ioutil.ReadFile(utils.CompletePath("testdata", tc.outputFilename))
 				if err != nil {
 					t.Fatal("Unable to read output file contents")
 				}

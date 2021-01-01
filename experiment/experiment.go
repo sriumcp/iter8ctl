@@ -13,7 +13,8 @@ type Experiment struct {
 
 // Started indicates if at least one iteration of the experiment has completed
 func (e *Experiment) Started() bool {
-	return e.Status.CompletedIterations != nil && *e.Status.CompletedIterations > 0
+	c := e.Status.CompletedIterations
+	return c != nil && *c > 0
 }
 
 // GetVersions returns the list of version names
