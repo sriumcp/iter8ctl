@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,16 +42,19 @@ func initStdinWithString(str string) {
 	stdin = &buffer
 }
 
-// redirectStdout redirects stdout to a string buffer
-func redirectStdout() {
-	stdout = &strings.Builder{}
+// redirectStdouterr discards stdout and stderr output if LOG_LEVEL is not well-defined
+func redirectStdouterr() {
+	_, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		stdout = ioutil.Discard
+		stderr = ioutil.Discard
+	}
 }
 
 /* Unit tests */
-
 func TestFilepath(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	for i := 1; i <= 8; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
@@ -63,7 +66,7 @@ func TestFilepath(t *testing.T) {
 
 func TestStdin(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	for i := 1; i <= 8; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
@@ -76,7 +79,7 @@ func TestStdin(t *testing.T) {
 
 func TestInvalidSubcommand(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	for _, args := range [][]string{
 		{"./iter8ctl"},
 		{"./iter8ctl", "invalid"},
@@ -88,14 +91,14 @@ func TestInvalidSubcommand(t *testing.T) {
 
 func TestParseError(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	os.Args = []string{"./iter8ctl", "describe", "--hello", "world"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestInvalidYAML(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	initStdinWithString("playing_playlist: {{ action }} playlist {{ playlist_name }}")
 	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
@@ -103,7 +106,7 @@ func TestInvalidYAML(t *testing.T) {
 
 func TestInvalidFile(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	os.Args = []string{"./iter8ctl", "describe", "-f", "abc123xyz789.yaml.json"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
@@ -111,14 +114,14 @@ func TestInvalidFile(t *testing.T) {
 func TestInvalidExperimentYAML(t *testing.T) {
 	initTestOS()
 	initStdinWithString("abc")
-	redirectStdout()
+	redirectStdouterr()
 	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
 func TestPrintAnalysis(t *testing.T) {
 	initTestOS()
-	redirectStdout()
+	redirectStdouterr()
 	for i := 1; i <= 9; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)

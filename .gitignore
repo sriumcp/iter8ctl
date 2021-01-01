@@ -9,9 +9,6 @@ iter8ctl
 # Test binary, built with `go test -c`
 *.test
 
-# Test data -- for now
-testdata/
-
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -12,35 +11,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// pointer is a helper function for creating string pointers from literals
-func pointer(s string) *string {
-	return &s
-}
-
-// readFileAsBytes is a helper function for reading contents of a file as []byte; filename is relative to testdata folder
-func readFileAsBytes(filename string) ([]byte, error) {
+// completePath is a helper function for converting relative file paths to absolute ones
+func completePath(prefix string, suffix string) string {
 	_, testFilename, _, _ := runtime.Caller(0)
-	filePath := filepath.Join(filepath.Dir(testFilename), "testdata", filename)
-	return ioutil.ReadFile(filePath)
+	return filepath.Join(filepath.Dir(testFilename), prefix, suffix)
 }
 
 /* CLI tests */
 
 func TestCLI(t *testing.T) {
-	// All subtests within this test rely in ./iter8ctl. So go build if needed.
-	if _, err := os.Stat("iter8ctl"); os.IsNotExist(err) {
-		exec.Command("go", "build").Run()
-	}
+	// All subtests within this test rely in ./iter8ctl. So go build.
+	exec.Command("go", "build", completePath("", "")).Run()
 
 	type test struct {
 		name           string   // name of this test
 		flags          []string // flags supplied to .iter8ctl command
-		outputFilename *string  // relative to testdata
-		errorFilename  *string  // relative to testdata
+		outputFilename string   // relative to testdata
+		errorFilename  string   // relative to testdata
 	}
 
 	tests := []test{
-		{name: "no-flags", flags: []string{"./iter8ctl"}, outputFilename: nil, errorFilename: pointer("error-no-flags.txt")},
+		{name: "no-flags", flags: []string{}, outputFilename: "", errorFilename: "error-no-flags.txt"},
+		{name: "invalid-subcommand", flags: []string{"invalid"}, outputFilename: "", errorFilename: "error-invalid-subcommand.txt"},
+		{name: "undefined-flag", flags: []string{"describe", "-name", "helloworld"}, outputFilename: "", errorFilename: "error-undefined-flag.txt"},
+		{name: "experiment1", flags: []string{"describe", "-f", completePath("testdata", "experiment1.yaml")}, outputFilename: "experiment1.out", errorFilename: ""},
+		{name: "experiment2", flags: []string{"describe", "-f", completePath("testdata", "experiment2.yaml")}, outputFilename: "experiment2.out", errorFilename: ""},
+		{name: "experiment3", flags: []string{"describe", "-f", completePath("testdata", "experiment3.yaml")}, outputFilename: "experiment3.out", errorFilename: ""},
+		{name: "experiment4", flags: []string{"describe", "-f", completePath("testdata", "experiment4.yaml")}, outputFilename: "experiment4.out", errorFilename: ""},
+		{name: "experiment5", flags: []string{"describe", "-f", completePath("testdata", "experiment5.yaml")}, outputFilename: "experiment5.out", errorFilename: ""},
+		{name: "experiment6", flags: []string{"describe", "-f", completePath("testdata", "experiment6.yaml")}, outputFilename: "experiment6.out", errorFilename: ""},
+		{name: "experiment7", flags: []string{"describe", "-f", completePath("testdata", "experiment7.yaml")}, outputFilename: "experiment7.out", errorFilename: ""},
+		{name: "experiment8", flags: []string{"describe", "-f", completePath("testdata", "experiment8.yaml")}, outputFilename: "experiment8.out", errorFilename: ""},
+		{name: "experiment9", flags: []string{"describe", "-f", completePath("testdata", "experiment9.yaml")}, outputFilename: "experiment9.out", errorFilename: ""},
 	}
 
 	for _, tc := range tests {
@@ -53,9 +55,9 @@ func TestCLI(t *testing.T) {
 			b2 := &strings.Builder{}
 			cmd.Stdout = b2
 
-			if tc.errorFilename != nil {
+			if tc.errorFilename != "" {
 				assert.Error(t, cmd.Run())
-				b3, err := readFileAsBytes(*tc.errorFilename)
+				b3, err := ioutil.ReadFile(completePath("testdata", tc.errorFilename))
 				if err != nil {
 					t.Fatal("Unable to read error file contents")
 				}
@@ -64,71 +66,13 @@ func TestCLI(t *testing.T) {
 				assert.NoError(t, cmd.Run())
 			}
 
-			if tc.outputFilename != nil {
-				b4, err := readFileAsBytes(*tc.outputFilename)
+			if tc.outputFilename != "" {
+				b4, err := ioutil.ReadFile(completePath("testdata", tc.outputFilename))
 				if err != nil {
 					t.Fatal("Unable to read output file contents")
 				}
-				assert.Equal(t, string(b4), b1.String())
+				assert.Equal(t, string(b4), b2.String())
 			}
 		})
 	}
 }
-
-// func Test_ExecuteCommand(t *testing.T) {
-// 	cmd := NewRootCmd("hi")
-// 	b := bytes.NewBufferString("")
-// 	cmd.SetOut(b)
-// 	cmd.Execute()
-// 	out, err := ioutil.ReadAll(b)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	if string(out) != "hi" {
-// 		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
-// 	}
-// }
-
-// func TestIter8ctlInvalidSubcommandIntegration(t *testing.T) {
-// 	expectedOutput := "expected 'describe' subcommand"
-
-// 	cmd := exec.Command("./iter8ctl")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "invalid")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }
-
-// func TestIter8ctlInvalidNamesIntegration(t *testing.T) {
-// 	expectedOutput := "expected a valid value for (experiment) name and namespace."
-
-// 	cmd := exec.Command("./iter8ctl", "describe", "-name", "")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "CapitalizedName")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "namewith*")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "cindrella", "-namespace", "")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-
-// 	cmd = exec.Command("./iter8ctl", "describe", "-name", "cindrella", "-namespace", "Americano")
-// 	actualOutput, err = execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }
-
-// func TestIter8ctlInvalidAPIVersionIntegration(t *testing.T) {
-// 	expectedOutput := "expected a valid value for (experiment) api version."
-
-// 	cmd := exec.Command("./iter8ctl", "describe", "--name", "myexp", "--namespace", "myns", "--apiVersion", "v2alpha2")
-// 	actualOutput, err := execExitingCommand(cmd)
-// 	postProcess(t, actualOutput, expectedOutput, err)
-// }
