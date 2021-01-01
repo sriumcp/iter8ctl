@@ -1,4 +1,4 @@
-package main
+package iter8ctl
 
 import (
 	"fmt"
