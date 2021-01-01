@@ -3,7 +3,7 @@ name: Build-and-test
 on:
   push:
     branches:
-    - main # Publish `main` as Docker `latest` image.
+    - main # run tests and code-coverage/vet/lint when code is pushed to main
   pull_request: # Run tests for any PRs.
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Test
-      run: go build && go test ./...
+      run: LOG_LEVEL=panic go test ./...
 
   code-coverage:
     needs: test
