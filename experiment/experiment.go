@@ -17,8 +17,11 @@ func (e *Experiment) Started() bool {
 	return c != nil && *c > 0
 }
 
-// GetVersions returns the list of version names
+// GetVersions returns the list of version names or an empty list of VersionInfo is not present.
 func (e *Experiment) GetVersions() []string {
+	if e.Spec.VersionInfo == nil {
+		return nil
+	}
 	versions := []string{e.Spec.VersionInfo.Baseline.Name}
 	for _, c := range e.Spec.VersionInfo.Candidates {
 		versions = append(versions, c.Name)

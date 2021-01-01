@@ -27,15 +27,7 @@ func initTestOS() {
 	osExiter = &testOS{}
 }
 
-// initStdinWithFile populates a byte buffer with input file contents and injects the buffer as stdin
-func initStdinWithFile(filePath string) {
-	data, _ := ioutil.ReadFile(filePath)
-	buffer := bytes.Buffer{}
-	buffer.Write(data)
-	stdin = &buffer
-}
-
-// initStdinWithFile populates a byte buffer with input string and injects the buffer as stdin
+// initStdinWithString populates a byte buffer with input string and injects the buffer as stdin
 func initStdinWithString(str string) {
 	buffer := bytes.Buffer{}
 	buffer.Write([]byte(str))
@@ -51,32 +43,6 @@ func redirectStdouterr() {
 	}
 }
 
-/* Unit tests */
-func TestFilepath(t *testing.T) {
-	initTestOS()
-	redirectStdouterr()
-	for i := 1; i <= 8; i++ {
-		_, testFilename, _, _ := runtime.Caller(0)
-		expFilename := fmt.Sprintf("experiment%v.yaml", i)
-		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
-		os.Args = []string{"./iter8ctl", "describe", "-f", expFilepath}
-		assert.NotPanics(t, func() { main() })
-	}
-}
-
-func TestStdin(t *testing.T) {
-	initTestOS()
-	redirectStdouterr()
-	for i := 1; i <= 8; i++ {
-		_, testFilename, _, _ := runtime.Caller(0)
-		expFilename := fmt.Sprintf("experiment%v.yaml", i)
-		expFilepath := filepath.Join(filepath.Dir(testFilename), "testdata", expFilename)
-		initStdinWithFile(expFilepath)
-		os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
-		assert.NotPanics(t, func() { main() })
-	}
-}
-
 func TestInvalidSubcommand(t *testing.T) {
 	initTestOS()
 	redirectStdouterr()
@@ -89,28 +55,6 @@ func TestInvalidSubcommand(t *testing.T) {
 	}
 }
 
-func TestParseError(t *testing.T) {
-	initTestOS()
-	redirectStdouterr()
-	os.Args = []string{"./iter8ctl", "describe", "--hello", "world"}
-	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
-}
-
-func TestInvalidYAML(t *testing.T) {
-	initTestOS()
-	redirectStdouterr()
-	initStdinWithString("playing_playlist: {{ action }} playlist {{ playlist_name }}")
-	os.Args = []string{"./iter8ctl", "describe", "-f", "-"}
-	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
-}
-
-func TestInvalidFile(t *testing.T) {
-	initTestOS()
-	redirectStdouterr()
-	os.Args = []string{"./iter8ctl", "describe", "-f", "abc123xyz789.yaml.json"}
-	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
-}
-
 func TestInvalidExperimentYAML(t *testing.T) {
 	initTestOS()
 	initStdinWithString("abc")
@@ -119,9 +63,9 @@ func TestInvalidExperimentYAML(t *testing.T) {
 	assert.PanicsWithValue(t, "Exiting with non-zero error code", func() { main() })
 }
 
-func TestPrintAnalysis(t *testing.T) {
+func TestNormal(t *testing.T) {
 	initTestOS()
-	redirectStdouterr()
+	// redirectStdouterr()
 	for i := 1; i <= 9; i++ {
 		_, testFilename, _, _ := runtime.Caller(0)
 		expFilename := fmt.Sprintf("experiment%v.yaml", i)
