@@ -44,6 +44,7 @@ var fakeValStrs = []string{"unavailable", "unavailable"}
 
 var satisfyStrs = []string{"true", "true"}
 
+// table driven tests
 var tests = []test{
 	{name: "experiment1", started: false, errorRates: []string{}, fakeMetric: []string{}, satisfyStrs: []string{}, fakeObj: []string{}},
 	{name: "experiment2", started: false, errorRates: []string{}, fakeMetric: []string{}, satisfyStrs: []string{}, fakeObj: []string{}},
