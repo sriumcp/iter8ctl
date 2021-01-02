@@ -5,11 +5,6 @@
 // The following command installs `iter8ctl` under the `/usr/local/bin` directory. To install under a different directory, change the value of `GOBIN` below.
 //  GOBIN=/usr/local/bin go install github.com/iter8-tools/iter8ctl
 //
-// Removal
-//
-// Remove `iter8ctl` as follows.
-//  rm <path-to-install-directory>/iter8ctl
-//
 // Usage Example 1
 //
 // Describe an iter8 Experiment resource object present in your Kubernetes cluster.
@@ -65,4 +60,10 @@
 //  +--------------------------------+---------------+---------------+
 //  | request-count                  | 117.444444445 |  57.714400001 |
 //  +--------------------------------+---------------+---------------+
+//
+// Removal
+//
+// Remove `iter8ctl` as follows.
+//  rm <GOBIN-value-used-during-install>/iter8ctl
+//
 package iter8ctl

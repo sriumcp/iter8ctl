@@ -49,7 +49,7 @@ func main() {
 	} else {
 		switch os.Args[1] {
 		case "describe":
-			d.ParseArgs(os.Args[2:]).GetExperiment().PrintAnalysis()
+			d.ParseFlags(os.Args[2:]).GetExperiment().PrintAnalysis()
 		default:
 			fmt.Fprintln(stderr, "expected 'describe' subcommand")
 			d.Usage()

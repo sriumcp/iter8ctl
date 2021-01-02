@@ -1,3 +1,4 @@
+// Package experiment enables extraction of useful information from experiment objects and their formatting.
 package experiment
 
 import (
@@ -6,18 +7,18 @@ import (
 	v2alpha1 "github.com/iter8-tools/etc3/api/v2alpha1"
 )
 
-// Experiment is an enhancement of v2alpha1.Experiment struct. It provides various methods to build experiment description.
+// Experiment is an enhancement of v2alpha1.Experiment struct, and supports various methods used in describing an experiment.
 type Experiment struct {
 	v2alpha1.Experiment
 }
 
-// Started indicates if at least one iteration of the experiment has completed
+// Started indicates if at least one iteration of the experiment has completed.
 func (e *Experiment) Started() bool {
 	c := e.Status.CompletedIterations
 	return c != nil && *c > 0
 }
 
-// GetVersions returns the list of version names or an empty list of VersionInfo is not present.
+// GetVersions returns the slice of version name strings. If the VersionInfo section is not present in the experiment's spec, then this slice is empty.
 func (e *Experiment) GetVersions() []string {
 	if e.Spec.VersionInfo == nil {
 		return nil
@@ -29,7 +30,7 @@ func (e *Experiment) GetVersions() []string {
 	return versions
 }
 
-// GetMetricStr returns the metric value (as a string) for a given metric and version
+// GetMetricStr returns the metric value as a string for a given metric and a given version.
 func (e *Experiment) GetMetricStr(metric string, version string) string {
 	am := e.Status.Analysis.AggregatedMetrics
 	if am == nil {
@@ -43,8 +44,8 @@ func (e *Experiment) GetMetricStr(metric string, version string) string {
 	return "unavailable"
 }
 
-// GetMetricValueStrs returns the given metric's value for each version
-func (e *Experiment) GetMetricValueStrs(metric string) []string {
+// GetMetricStrs returns the given metric's value as a slice of strings, whose elements correspond to versions.
+func (e *Experiment) GetMetricStrs(metric string) []string {
 	versions := e.GetVersions()
 	reqs := make([]string, len(versions))
 	for i, v := range versions {
@@ -53,7 +54,7 @@ func (e *Experiment) GetMetricValueStrs(metric string) []string {
 	return reqs
 }
 
-// GetMetricNameAndUnits from metric info
+// GetMetricNameAndUnits extracts the name, and if specified, units for the given metricInfo object and combines them into a string.
 func GetMetricNameAndUnits(metricInfo v2alpha1.MetricInfo) string {
 	r := metricInfo.Name
 	if metricInfo.MetricObj.Spec.Units != nil {
@@ -62,7 +63,7 @@ func GetMetricNameAndUnits(metricInfo v2alpha1.MetricInfo) string {
 	return r
 }
 
-// StringifyObjective returns a string representation of objective (with <= notation)
+// StringifyObjective returns a string representation of the given objective.
 func StringifyObjective(objective v2alpha1.Objective) string {
 	r := ""
 	if objective.LowerLimit != nil {
@@ -75,9 +76,13 @@ func StringifyObjective(objective v2alpha1.Objective) string {
 	return r
 }
 
-// GetSatisfyStr returns a true/false/unavailable valued string denotating if a version satisfies the objective
+// GetSatisfyStr returns a true/false/unavailable valued string denotating if a version satisfies the objective.
 func (e *Experiment) GetSatisfyStr(objectiveIndex int, version string) string {
-	va := e.Status.Analysis.VersionAssessments
+	ana := e.Status.Analysis
+	if ana == nil {
+		return "unavailable"
+	}
+	va := ana.VersionAssessments
 	if va == nil {
 		return "unavailable"
 	}
@@ -89,7 +94,7 @@ func (e *Experiment) GetSatisfyStr(objectiveIndex int, version string) string {
 	return "unavailable"
 }
 
-// GetSatisfyStrs returns a slice of true/false/unavailable valued strings for an objective denoting if it is satisfied by versions
+// GetSatisfyStrs returns a slice of true/false/unavailable valued strings for an objective denoting if it is satisfied by versions.
 func (e *Experiment) GetSatisfyStrs(objectiveIndex int) []string {
 	versions := e.GetVersions()
 	sat := make([]string, len(versions))

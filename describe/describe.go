@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// Cmd struct contains all the data needed for the 'describe' subcommand.
+// Cmd struct contains fields that store flags and intermediate results associated with an invocation of 'iter8ctl describe' subcommand.
 type Cmd struct {
 	flagSet        *flag.FlagSet
 	experimentPath string
@@ -26,13 +26,13 @@ type Cmd struct {
 	stdout         io.Writer
 	stderr         io.Writer
 	// Usage is a function that is invoked when execution of any `Cmd` method results in an error.
-	// Typically, Usage() prints the error message to stderr, and the program exits.
-	// Note that Usage() is a struct field and not a method.
-	// You can supply your own implementation of Usage() while constructing a new `Cmd` struct.
+	// The typical behavior of `Cmd` after an error is as follows: Usage() prints an error message to stderr, subsequent Cmd methods turn into no-ops, and the program exits.
+	// Note that Usage() is a field and not a method. You can supply your own implementation of Usage() while constructing `Cmd`.
 	Usage func()
 }
 
 // Builder returns an initialized Cmd struct pointer.
+// Builder enables the builder design pattern along with method chaining.
 func Builder(stdin io.Reader, stdout io.Writer, stderr io.Writer) *Cmd {
 	// ContinueOnError ensures flagSet does not ExitOnError
 	var flagSet = flag.NewFlagSet("describe", flag.ContinueOnError)
@@ -60,13 +60,13 @@ func Builder(stdin io.Reader, stdout io.Writer, stderr io.Writer) *Cmd {
 	return d
 }
 
-// Error returns any error accumulated by Cmd so far.
+// Error returns any error generated during the invocation of Cmd methods, or nil if there are no errors.
 func (d *Cmd) Error() error {
 	return d.err
 }
 
-// ParseArgs populates d.experimentPath.
-func (d *Cmd) ParseArgs(args []string) *Cmd {
+// ParseFlags parses the flags supplied to Cmd. The returned Cmd struct contains the parsed result. If invalid flags are supplied, ParseFlags generates an error.
+func (d *Cmd) ParseFlags(args []string) *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -81,9 +81,10 @@ func (d *Cmd) ParseArgs(args []string) *Cmd {
 	return d
 }
 
-// GetExperiment populates d.experiment from an input file or from stdin input.
-// Input should be valid experiment YAML.
-// If input is invalid, GetExperiment sets an error in d.err.
+// GetExperiment populates the Cmd struct with an experiment.
+// The experiment may come from an input file when `iter8ctl describe` subcommand is invoked with the "-f experiment-file-path.yaml" flag.
+// The experiment may also come from console input when `iter8ctl describe` subcommand is invoked with the "-f -" flag.
+// The experiment input needs to be a valid iter8 experiment YAML. Otherwise, GetExperiment will generate an error.
 func (d *Cmd) GetExperiment() *Cmd {
 	if d.err != nil {
 		return d
@@ -115,8 +116,8 @@ func (d *Cmd) GetExperiment() *Cmd {
 	return d
 }
 
-// PrintProgress prints name, namespace, and target of the experiment and the number of completed iterations.
-func (d *Cmd) PrintProgress() *Cmd {
+// printProgress prints name, namespace, and target of the experiment and the number of completed iterations into d's description buffer.
+func (d *Cmd) printProgress() *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -134,8 +135,9 @@ func (d *Cmd) PrintProgress() *Cmd {
 	return d
 }
 
-// PrintWinnerAssessment prints the winning version in the experiment, if Status.Analysis.WinnerAssessment is not nil in the experiment object.
-func (d *Cmd) PrintWinnerAssessment() *Cmd {
+// printWinnerAssessment prints the winning version in the experiment into d's description buffer.
+// If winner assessment is unavailable for the underlying experiment, this method will indicate likewise.
+func (d *Cmd) printWinnerAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -152,10 +154,11 @@ func (d *Cmd) PrintWinnerAssessment() *Cmd {
 	return d
 }
 
-// PrintObjectiveAssessment prints a matrix of boolean values, if Status.Analysis.VersionAssessments is not nil in the experiment object.
-// Rows correspond to experiment objectives, columns correspond to versions, and entry [i, j] indicates if version j satisfies objective i.
+// printObjectiveAssessment prints a matrix of boolean values into d's description buffer.
+// Rows correspond to experiment objectives, columns correspond to versions, and entry [i, j] indicates if objective i is satisfied by version j.
 // Objective assessments are printed in the same sequence as in the experiment's spec.criteria.objectives section.
-func (d *Cmd) PrintObjectiveAssessment() *Cmd {
+// If objective assessments are unavailable for the underlying experiment, this method will indicate likewise.
+func (d *Cmd) printObjectiveAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -177,21 +180,22 @@ func (d *Cmd) PrintObjectiveAssessment() *Cmd {
 	return d
 }
 
-// PrintVersionAssessment prints how each version is performing with respect to experiment criteria.
-func (d *Cmd) PrintVersionAssessment() *Cmd {
+// printVersionAssessment prints how each version is performing with respect to experiment criteria into d's description buffer. This method invokes printObjectiveAssessment under the covers.
+func (d *Cmd) printVersionAssessment() *Cmd {
 	if d.err != nil {
 		return d
 	}
 	if c := d.experiment.Spec.Criteria; c != nil && len(c.Objectives) > 0 {
-		d.PrintObjectiveAssessment()
+		d.printObjectiveAssessment()
 	}
 	return d
 }
 
-// PrintMetrics prints a matrix of decimal values.
+// printMetrics prints a matrix of (decimal) metric values into d's description buffer.
 // Rows correspond to experiment metrics, columns correspond to versions, and entry [i, j] indicates the value of metric i for version j.
-// Metrics are in the same sequence as in the experiment's spec.metrics section.
-func (d *Cmd) PrintMetrics() *Cmd {
+// Metrics are printed in the same sequence as in the experiment's spec.metrics section.
+// If metrics are unavailable for the underlying experiment, this method will indicate likewise.
+func (d *Cmd) printMetrics() *Cmd {
 	if d.err != nil {
 		return d
 	}
@@ -205,7 +209,7 @@ func (d *Cmd) PrintMetrics() *Cmd {
 			table.SetHeader(append([]string{"Metric"}, versions...))
 			for _, metricInfo := range d.experiment.Spec.Metrics {
 				row := []string{experiment.GetMetricNameAndUnits(metricInfo)}
-				table.Append(append(row, d.experiment.GetMetricValueStrs(metricInfo.Name)...))
+				table.Append(append(row, d.experiment.GetMetricStrs(metricInfo.Name)...))
 			}
 			table.Render()
 		}
@@ -213,14 +217,14 @@ func (d *Cmd) PrintMetrics() *Cmd {
 	return d
 }
 
-// PrintAnalysis describes the experiment by printing progress, winner and version assessments, and metrics.
+// PrintAnalysis prints the progress of the iter8 experiment, winner assessment, version assessment, and metrics.
 func (d *Cmd) PrintAnalysis() *Cmd {
 	if d.err != nil {
 		return d
 	}
-	d.PrintProgress()
+	d.printProgress()
 	if d.experiment.Started() {
-		d.PrintWinnerAssessment().PrintVersionAssessment().PrintMetrics()
+		d.printWinnerAssessment().printVersionAssessment().printMetrics()
 	}
 	if d.err == nil {
 		fmt.Fprintln(d.stdout, d.description.String())
