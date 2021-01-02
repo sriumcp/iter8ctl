@@ -11,25 +11,16 @@ import (
 	"github.com/iter8-tools/iter8ctl/describe"
 )
 
-// OSExiter interface enables exiting the current program.
-// The inferface is useful in tests to mock OS.exit function with GO's panic function.
-type OSExiter interface {
-	Exit(code int)
-}
-type iter8ctlOS struct{}
-
-func (m iter8ctlOS) Exit(code int) {
-	os.Exit(code)
-}
-
-var osExiter OSExiter
-
-// Dependency injection for stdio
+// stdin enables dependency injection for console input (stdin)
 var stdin io.Reader
+
+// stdout enables dependency injection for console output (stdout)
 var stdout io.Writer
+
+// stderr enables dependency injection for console error output (stderr)
 var stderr io.Writer
 
-// init initializes stdio, logging, and osExiter
+// init initializes stdin/out/err, and logging.
 func init() {
 	// stdio
 	stdin = os.Stdin
@@ -47,30 +38,21 @@ func init() {
 		log.SetReportCaller(true)
 		log.SetLevel(logLevel)
 	}
-	// osExiter
-	osExiter = &iter8ctlOS{}
 }
 
-// main serves as the program entry point.
+// main serves as the entry point for iter8ctl CLI.
 func main() {
 	d := describe.Builder(stdin, stdout, stderr)
 	if len(os.Args) < 2 {
 		fmt.Fprintln(stderr, "expected 'describe' subcommand")
 		d.Usage()
-		osExiter.Exit(1)
-	}
-
-	switch os.Args[1] {
-
-	case "describe":
-		d.ParseArgs(os.Args[2:]).GetExperiment().PrintAnalysis()
-		if d.Error() != nil {
-			osExiter.Exit(1)
+	} else {
+		switch os.Args[1] {
+		case "describe":
+			d.ParseArgs(os.Args[2:]).GetExperiment().PrintAnalysis()
+		default:
+			fmt.Fprintln(stderr, "expected 'describe' subcommand")
+			d.Usage()
 		}
-
-	default:
-		fmt.Fprintln(stderr, "expected 'describe' subcommand")
-		d.Usage()
-		osExiter.Exit(1)
 	}
 }

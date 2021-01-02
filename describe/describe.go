@@ -1,3 +1,4 @@
+// Package describe implements the `iter8ctl describe` subcommand.
 package describe
 
 import (
@@ -24,7 +25,11 @@ type Cmd struct {
 	stdin          io.Reader
 	stdout         io.Writer
 	stderr         io.Writer
-	Usage          func()
+	// Usage is a function that is invoked when execution of any `Cmd` method results in an error.
+	// Typically, Usage() prints the error message to stderr, and the program exits.
+	// Note that Usage() is a struct field and not a method.
+	// You can supply your own implementation of Usage() while constructing a new `Cmd` struct.
+	Usage func()
 }
 
 // Builder returns an initialized Cmd struct pointer.
