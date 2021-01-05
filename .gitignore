@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+iter8ctl
 
 # Test binary, built with `go test -c`
 *.test
