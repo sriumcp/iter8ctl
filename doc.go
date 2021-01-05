@@ -66,4 +66,4 @@
 // Remove `iter8ctl` as follows.
 //  rm <GOBIN-value-used-during-install>/iter8ctl
 //
-package iter8ctl
+package main

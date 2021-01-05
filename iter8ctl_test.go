@@ -1,4 +1,4 @@
-package iter8ctl
+package main
 
 import (
 	"io/ioutil"
@@ -49,8 +49,9 @@ func TestCLI(t *testing.T) {
 			b2 := &strings.Builder{}
 			cmd.Stdout = b2
 
+			cmd.Run()
+
 			if tc.errorFilename != "" {
-				assert.Error(t, cmd.Run())
 				ef := utils.CompletePath("testdata", tc.errorFilename)
 				t.Log("Reading error file: ", ef)
 				b3, err := ioutil.ReadFile(utils.CompletePath("testdata", tc.errorFilename))
@@ -58,8 +59,6 @@ func TestCLI(t *testing.T) {
 					t.Fatal("Unable to read contents of error file: ", ef)
 				}
 				assert.Equal(t, string(b3), b1.String())
-			} else {
-				assert.NoError(t, cmd.Run())
 			}
 
 			if tc.outputFilename != "" {
