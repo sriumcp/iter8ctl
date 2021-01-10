@@ -1,0 +1,36 @@
+******
+Experiment name: experiment-1
+Experiment namespace: default
+Experiment target: default/my-model
+
+******
+Number of completed iterations: 3
+
+******
+Winning version: not found
+
+******
+Objectives
++--------------------------+---------+--------+
+|        OBJECTIVE         | DEFAULT | CANARY |
++--------------------------+---------+--------+
+| mean-latency <= 1000.000 | false   | false  |
++--------------------------+---------+--------+
+| error-rate <= 0.010      | false   | false  |
++--------------------------+---------+--------+
+
+******
+Metrics
++--------------------------------+-------------+-------------+
+|             METRIC             |   DEFAULT   |   CANARY    |
++--------------------------------+-------------+-------------+
+| request-count                  | unavailable | unavailable |
++--------------------------------+-------------+-------------+
+| 95th-percentile-tail-latency   | unavailable | unavailable |
+| (milliseconds)                 |             |             |
++--------------------------------+-------------+-------------+
+| mean-latency (milliseconds)    | unavailable | unavailable |
++--------------------------------+-------------+-------------+
+| error-rate                     | unavailable | unavailable |
++--------------------------------+-------------+-------------+
+
