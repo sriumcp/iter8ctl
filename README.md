@@ -47,6 +47,7 @@ done
 The following is the output of executing `iter8ctl describe -f testdata/experiment8.yaml`; the `testdata` folder is part of the [iter8ctl GitHub repo](https://github.com/iter8-tools/iter8ctl) and contains sample experiments used in tests.
 
 ```shell
+$ ./iter8ctl describe -f testdata/experiment8.yaml
 ******
 Experiment name: sklearn-iris-experiment-1
 Experiment namespace: kfserving-test
@@ -60,28 +61,28 @@ Winning version: canary
 
 ******
 Objectives
-+----------------------+---------+--------+
-|      OBJECTIVE       | DEFAULT | CANARY |
-+----------------------+---------+--------+
-| mean-latency <= 1000 | true    | true   |
-+----------------------+---------+--------+
-| error-rate <= 0.010  | true    | true   |
-+----------------------+---------+--------+
++--------------------------+---------+--------+
+|        OBJECTIVE         | DEFAULT | CANARY |
++--------------------------+---------+--------+
+| mean-latency <= 1000.000 | true    | true   |
++--------------------------+---------+--------+
+| error-rate <= 0.010      | true    | true   |
++--------------------------+---------+--------+
 
 ******
 Metrics
-+--------------------------------+---------------+---------------+
-|             METRIC             |    DEFAULT    |    CANARY     |
-+--------------------------------+---------------+---------------+
-| 95th-percentile-tail-latency   | 330.681818182 | 310.319302313 |
-| (milliseconds)                 |               |               |
-+--------------------------------+---------------+---------------+
-| mean-latency (milliseconds)    | 228.419047620 | 229.001070304 |
-+--------------------------------+---------------+---------------+
-| error-rate                     |             0 |             0 |
-+--------------------------------+---------------+---------------+
-| request-count                  | 117.444444445 |  57.714400001 |
-+--------------------------------+---------------+---------------+
++--------------------------------+---------+---------+
+|             METRIC             | DEFAULT | CANARY  |
++--------------------------------+---------+---------+
+| 95th-percentile-tail-latency   | 330.682 | 310.320 |
+| (milliseconds)                 |         |         |
++--------------------------------+---------+---------+
+| mean-latency (milliseconds)    | 228.420 | 229.002 |
++--------------------------------+---------+---------+
+| error-rate                     |   0.000 |   0.000 |
++--------------------------------+---------+---------+
+| request-count                  | 117.445 |  57.715 |
++--------------------------------+---------+---------+
 ```
 
 # Contributing
