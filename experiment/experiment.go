@@ -38,7 +38,9 @@ func (e *Experiment) GetMetricStr(metric string, version string) string {
 	}
 	if vals, ok := am.Data[metric]; ok {
 		if val, ok := vals.Data[version]; ok {
-			return val.Value.AsDec().String()
+			if val.Value != nil {
+				return val.Value.AsDec().String()
+			}
 		}
 	}
 	return "unavailable"
