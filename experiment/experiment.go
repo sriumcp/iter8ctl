@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	v2alpha1 "github.com/iter8-tools/etc3/api/v2alpha1"
+	"gopkg.in/inf.v0"
 )
 
 // Experiment is an enhancement of v2alpha1.Experiment struct, and supports various methods used in describing an experiment.
@@ -38,7 +39,10 @@ func (e *Experiment) GetMetricStr(metric string, version string) string {
 	}
 	if vals, ok := am.Data[metric]; ok {
 		if val, ok := vals.Data[version]; ok {
-			return val.Value.AsDec().String()
+			if val.Value != nil {
+				z := new(inf.Dec).Round(val.Value.AsDec(), 3, inf.RoundCeil)
+				return z.String()
+			}
 		}
 	}
 	return "unavailable"
@@ -67,11 +71,13 @@ func GetMetricNameAndUnits(metricInfo v2alpha1.MetricInfo) string {
 func StringifyObjective(objective v2alpha1.Objective) string {
 	r := ""
 	if objective.LowerLimit != nil {
-		r += objective.LowerLimit.AsDec().String() + " <= "
+		z := new(inf.Dec).Round(objective.LowerLimit.AsDec(), 3, inf.RoundCeil)
+		r += z.String() + " <= "
 	}
 	r += objective.Metric
 	if objective.UpperLimit != nil {
-		r += " <= " + objective.UpperLimit.AsDec().String()
+		z := new(inf.Dec).Round(objective.UpperLimit.AsDec(), 3, inf.RoundCeil)
+		r += " <= " + z.String()
 	}
 	return r
 }

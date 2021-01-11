@@ -46,17 +46,20 @@ var fakeValStrs = []string{"unavailable", "unavailable"}
 
 var satisfyStrs = []string{"true", "true"}
 
+var errorRateStrs = []string{"0.000", "0.000"}
+
 // table driven tests
 var tests = []test{
 	{name: "experiment1", started: false, errorRates: []string{}, fakeMetric: []string{}, satisfyStrs: []string{}, fakeObj: []string{}},
 	{name: "experiment2", started: false, errorRates: []string{}, fakeMetric: []string{}, satisfyStrs: []string{}, fakeObj: []string{}},
-	{name: "experiment3", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment4", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment5", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment6", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment7", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment8", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment9", started: true, errorRates: []string{"0", "0"}, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment3", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment4", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment5", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment6", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment7", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment8", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment9", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
+	{name: "experiment10", started: true, errorRates: fakeValStrs, fakeMetric: fakeValStrs, satisfyStrs: []string{"false", "false"}, fakeObj: fakeValStrs},
 }
 
 func init() {
@@ -106,7 +109,7 @@ func TestGetMetricNameAndUnits(t *testing.T) {
 }
 
 func TestStringifyObjective(t *testing.T) {
-	objectives := [2]string{"mean-latency <= 1000", "error-rate <= 0.010"}
+	objectives := [2]string{"mean-latency <= 1000.000", "error-rate <= 0.010"}
 	objs := [2]string{}
 	for i := 0; i < 2; i++ {
 		objs[i] = StringifyObjective(tests[2].exp.Spec.Criteria.Objectives[i])
@@ -150,7 +153,7 @@ func ExampleStringifyObjective_upperlimit() {
 	}
 	str := StringifyObjective(obj)
 	fmt.Println(str)
-	// Output: error-rate <= 0.01
+	// Output: error-rate <= 0.010
 }
 
 func ExampleStringifyObjective_lowerlimit() {
@@ -223,7 +226,7 @@ func ExampleExperiment_GetMetricStrs() {
 	// Get value of the 'mean-latency' metric for all versions ('default' and 'canary')
 	mets := exp.GetMetricStrs("mean-latency")
 	fmt.Println(mets)
-	// output: [228.787878788 197.500]
+	// output: [228.788 197.500]
 }
 
 func ExampleExperiment_GetMetricStrs_unavailable() {
