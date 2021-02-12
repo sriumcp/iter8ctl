@@ -44,45 +44,45 @@ done
 ```
 
 # Sample Output
-The following is the output of executing `iter8ctl describe -f testdata/experiment8.yaml`; the `testdata` folder is part of the [iter8ctl GitHub repo](https://github.com/iter8-tools/iter8ctl) and contains sample experiments used in tests.
+The following is the output of executing `iter8ctl describe -f testdata/experiment10.yaml`; the `testdata` folder is part of the [iter8ctl GitHub repo](https://github.com/iter8-tools/iter8ctl) and contains sample experiments used in tests.
 
 ```shell
-$ ./iter8ctl describe -f testdata/experiment8.yaml
-******
-Experiment name: sklearn-iris-experiment-1
-Experiment namespace: kfserving-test
-Experiment target: kfserving-test/sklearn-iris
+$ ./iter8ctl describe -f testdata/experiment10.yaml
+****** Overview ******
+Experiment name: experiment-1
+Experiment namespace: knative-test
+Target: knative-test/sample-application
+Testing pattern: Canary
+Deployment pattern: Progressive
 
-******
-Number of completed iterations: 10
+****** Progress Summary ******
+Experiment stage: Completed
+Number of completed iterations: 8
 
-******
-Winning version: canary
+****** Winner Assessment ******
+App versions in this experiment: [sample-application-v1 sample-application-v2]
+Winning version: sample-application-v2
+Recommended baseline: sample-application-v2
 
-******
-Objectives
-+--------------------------+---------+--------+
-|        OBJECTIVE         | DEFAULT | CANARY |
-+--------------------------+---------+--------+
-| mean-latency <= 1000.000 | true    | true   |
-+--------------------------+---------+--------+
-| error-rate <= 0.010      | true    | true   |
-+--------------------------+---------+--------+
+****** Objective Assessment ******
++--------------------------+-----------------------+-----------------------+
+|        OBJECTIVE         | SAMPLE-APPLICATION-V1 | SAMPLE-APPLICATION-V2 |
++--------------------------+-----------------------+-----------------------+
+| mean-latency <= 2000.000 | true                  | true                  |
++--------------------------+-----------------------+-----------------------+
+| error-rate <= 0.010      | true                  | true                  |
++--------------------------+-----------------------+-----------------------+
 
-******
-Metrics
-+--------------------------------+---------+---------+
-|             METRIC             | DEFAULT | CANARY  |
-+--------------------------------+---------+---------+
-| 95th-percentile-tail-latency   | 330.682 | 310.320 |
-| (milliseconds)                 |         |         |
-+--------------------------------+---------+---------+
-| mean-latency (milliseconds)    | 228.420 | 229.002 |
-+--------------------------------+---------+---------+
-| error-rate                     |   0.000 |   0.000 |
-+--------------------------------+---------+---------+
-| request-count                  | 117.445 |  57.715 |
-+--------------------------------+---------+---------+
+****** Metrics Assessment ******
++-----------------------------+-----------------------+-----------------------+
+|           METRIC            | SAMPLE-APPLICATION-V1 | SAMPLE-APPLICATION-V2 |
++-----------------------------+-----------------------+-----------------------+
+| request-count               |              1022.565 |               514.445 |
++-----------------------------+-----------------------+-----------------------+
+| mean-latency (milliseconds) |                 5.881 |                 4.702 |
++-----------------------------+-----------------------+-----------------------+
+| error-rate                  |                 0.000 |                 0.000 |
++-----------------------------+-----------------------+-----------------------+
 ```
 
 # Contributing
