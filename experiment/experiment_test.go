@@ -55,7 +55,6 @@ var tests = []test{
 	{name: "experiment7", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
 	{name: "experiment8", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
 	{name: "experiment9", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment10", started: true, errorRates: fakeValStrs, fakeMetric: fakeValStrs, satisfyStrs: []string{"false", "false"}, fakeObj: fakeValStrs},
 }
 
 func init() {
