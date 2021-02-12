@@ -2,7 +2,6 @@
 package describe
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,9 +9,9 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/olekukonko/tablewriter"
-	"sigs.k8s.io/yaml"
 )
 
 // Cmd struct contains fields that store flags and intermediate results associated with an invocation of 'iter8ctl describe' subcommand.
@@ -100,19 +99,14 @@ func (d *Cmd) GetExperiment() *Cmd {
 		fmt.Fprintln(d.stderr, d.err)
 		return d
 	}
-	expBytesJSON, err := yaml.YAMLToJSON(expBytes)
-	d.err = err
-	if d.err != nil {
-		d.err = errors.New("YAML to JSON conversion error... this could be due to invalid YAML input")
-		fmt.Fprintln(d.stderr, d.err)
-		return d
-	}
-	d.err = json.Unmarshal(expBytesJSON, d.experiment)
+
+	d.err = yaml.Unmarshal(expBytes, d.experiment)
 	if d.err != nil {
 		d.err = errors.New("unmarshal error... this could be due to invalid experiment YAML input")
 		fmt.Fprintln(d.stderr, d.err)
 		return d
 	}
+
 	return d
 }
 
