@@ -1,17 +1,16 @@
 package experiment
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/iter8-tools/etc3/api/v2alpha1"
 	"github.com/iter8-tools/iter8ctl/utils"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/yaml"
 )
 
 // getExp is a helper function for extracting an experiment object from experiment filenamePrefix
@@ -22,12 +21,9 @@ func getExp(filenamePrefix string) (*Experiment, error) {
 	if err != nil {
 		return nil, err
 	}
-	expBytesJSON, err := yaml.YAMLToJSON(expBytes)
-	if err != nil {
-		return nil, err
-	}
+
 	exp := &Experiment{}
-	err = json.Unmarshal(expBytesJSON, &exp)
+	err = yaml.Unmarshal(expBytes, exp)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +55,6 @@ var tests = []test{
 	{name: "experiment7", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
 	{name: "experiment8", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
 	{name: "experiment9", started: true, errorRates: errorRateStrs, fakeMetric: fakeValStrs, satisfyStrs: satisfyStrs, fakeObj: fakeValStrs},
-	{name: "experiment10", started: true, errorRates: fakeValStrs, fakeMetric: fakeValStrs, satisfyStrs: []string{"false", "false"}, fakeObj: fakeValStrs},
 }
 
 func init() {

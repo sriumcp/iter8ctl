@@ -1,16 +1,19 @@
-******
+
+****** Overview ******
 Experiment name: sklearn-iris-experiment-1
 Experiment namespace: kfserving-test
-Experiment target: kfserving-test/sklearn-iris
+Target: kfserving-test/sklearn-iris
+Testing pattern: 
 
-******
+****** Progress Summary ******
 Number of completed iterations: 9
 
-******
+****** Winner Assessment ******
+App versions in this experiment: [default canary]
 Winning version: canary
+Recommended baseline: canary
 
-******
-Objectives
+****** Objective Assessment ******
 +--------------------------+---------+--------+
 |        OBJECTIVE         | DEFAULT | CANARY |
 +--------------------------+---------+--------+
@@ -19,8 +22,7 @@ Objectives
 | error-rate <= 0.010      | true    | true   |
 +--------------------------+---------+--------+
 
-******
-Metrics
+****** Metrics Assessment ******
 +--------------------------------+---------+---------+
 |             METRIC             | DEFAULT | CANARY  |
 +--------------------------------+---------+---------+

@@ -1,36 +1,37 @@
-******
+
+****** Overview ******
 Experiment name: experiment-1
-Experiment namespace: default
-Experiment target: default/my-model
+Experiment namespace: knative-test
+Target: knative-test/sample-application
+Testing pattern: Canary
+Deployment pattern: Progressive
 
-******
-Number of completed iterations: 3
+****** Progress Summary ******
+Experiment stage: Completed
+Number of completed iterations: 8
 
-******
-Winning version: not found
+****** Winner Assessment ******
+App versions in this experiment: [sample-application-v1 sample-application-v2]
+Winning version: sample-application-v2
+Recommended baseline: sample-application-v2
 
-******
-Objectives
-+--------------------------+---------+--------+
-|        OBJECTIVE         | DEFAULT | CANARY |
-+--------------------------+---------+--------+
-| mean-latency <= 1000.000 | false   | false  |
-+--------------------------+---------+--------+
-| error-rate <= 0.010      | false   | false  |
-+--------------------------+---------+--------+
+****** Objective Assessment ******
++--------------------------+-----------------------+-----------------------+
+|        OBJECTIVE         | SAMPLE-APPLICATION-V1 | SAMPLE-APPLICATION-V2 |
++--------------------------+-----------------------+-----------------------+
+| mean-latency <= 2000.000 | true                  | true                  |
++--------------------------+-----------------------+-----------------------+
+| error-rate <= 0.010      | true                  | true                  |
++--------------------------+-----------------------+-----------------------+
 
-******
-Metrics
-+--------------------------------+-------------+-------------+
-|             METRIC             |   DEFAULT   |   CANARY    |
-+--------------------------------+-------------+-------------+
-| request-count                  | unavailable | unavailable |
-+--------------------------------+-------------+-------------+
-| 95th-percentile-tail-latency   | unavailable | unavailable |
-| (milliseconds)                 |             |             |
-+--------------------------------+-------------+-------------+
-| mean-latency (milliseconds)    | unavailable | unavailable |
-+--------------------------------+-------------+-------------+
-| error-rate                     | unavailable | unavailable |
-+--------------------------------+-------------+-------------+
+****** Metrics Assessment ******
++-----------------------------+-----------------------+-----------------------+
+|           METRIC            | SAMPLE-APPLICATION-V1 | SAMPLE-APPLICATION-V2 |
++-----------------------------+-----------------------+-----------------------+
+| request-count               |              1022.565 |               514.445 |
++-----------------------------+-----------------------+-----------------------+
+| mean-latency (milliseconds) |                 5.881 |                 4.702 |
++-----------------------------+-----------------------+-----------------------+
+| error-rate                  |                 0.000 |                 0.000 |
++-----------------------------+-----------------------+-----------------------+
 
