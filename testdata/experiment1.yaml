@@ -2,7 +2,7 @@ apiVersion: iter8.tools/v2alpha1
 kind: Experiment
 metadata: 
   annotations: 
-    kubectl.kubernetes.io/last-applied-configuration: "{\"apiVersion\":\"iter8.tools/v2alpha1\",\"kind\":\"Experiment\",\"metadata\":{\"annotations\":{},\"name\":\"sklearn-iris-experiment-1\",\"namespace\":\"kfserving-test\"},\"spec\":{\"criteria\":{\"indicators\":[\"95th-percentile-tail-latency\"],\"objectives\":[{\"metric\":\"mean-latency\",\"upperLimit\":1000},{\"metric\":\"error-rate\",\"upperLimit\":\"0.01\"}]},\"duration\":{\"intervalSeconds\":15,\"maxIterations\":10},\"strategy\":{\"type\":\"Canary\"},\"target\":\"kfserving-test/sklearn-iris\"}}\n"
+    kubectl.kubernetes.io/last-applied-configuration: "{\"apiVersion\":\"iter8.tools/v2alpha1\",\"kind\":\"Experiment\",\"metadata\":{\"annotations\":{},\"name\":\"sklearn-iris-experiment-1\",\"namespace\":\"kfserving-test\"},\"spec\":{\"criteria\":{\"indicators\":[\"95th-percentile-tail-latency\"],\"objectives\":[{\"metric\":\"mean-latency\",\"upperLimit\":1000},{\"metric\":\"error-rate\",\"upperLimit\":\"0.01\"}]},\"duration\":{\"intervalSeconds\":15,\"iterationsPerLoop\":10},\"strategy\":{\"type\":\"Canary\"},\"target\":\"kfserving-test/sklearn-iris\"}}\n"
   creationTimestamp: "2020-12-27T21:55:48Z"
   generation: 2
   name: sklearn-iris-experiment-1
@@ -24,7 +24,7 @@ spec:
     requestCount: request-count
   duration: 
     intervalSeconds: 15
-    maxIterations: 10
+    iterationsPerLoop: 10
   metrics: 
     - 
       metricObj: 
@@ -42,8 +42,9 @@ spec:
           uid: e17018f8-613d-47c7-bb07-c32a03befe2c
         spec: 
           description: "Mean latency"
-          params: 
-            query: "(sum(increase(revision_app_request_latencies_sum{service_name=~'.*$name'}[$interval]))or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0))"
+          params:
+          - name: query
+            value: "(sum(increase(revision_app_request_latencies_sum{service_name=~'.*$name'}[$interval]))or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0))"
           provider: prometheus
           sample_size: 
             name: request-count
@@ -66,8 +67,9 @@ spec:
           uid: f9dc0774-eddc-4e44-8c27-b459f14dd4f8
         spec: 
           description: "Fraction of requests with error responses"
-          params: 
-            query: "(sum(increase(revision_app_request_latencies_count{response_code_class!='2xx',service_name=~'.*$name'}[$interval])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0))"
+          params:
+          - name: query 
+            value: "(sum(increase(revision_app_request_latencies_count{response_code_class!='2xx',service_name=~'.*$name'}[$interval])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0))"
           provider: prometheus
           sample_size: 
             name: request-count
@@ -89,8 +91,9 @@ spec:
           uid: f67ca0d6-5653-4f52-a0d9-7394a56e595a
         spec: 
           description: "Number of requests"
-          params: 
-            query: "sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0)"
+          params:
+          - name: query
+            value: "sum(increase(revision_app_request_latencies_count{service_name=~'.*$name'}[$interval])) or on() vector(0)"
           provider: prometheus
           type: counter
       name: request-count
@@ -110,8 +113,9 @@ spec:
           uid: b8375e54-33d1-4185-9eac-087ebf7693c9
         spec: 
           description: "95th percentile tail latency"
-          params: 
-            query: "histogram_quantile(0.95, sum(rate(revision_app_request_latencies_bucket{service_name=~'.*$name'}[$interval])) by (le))"
+          params:
+          - name: query
+            value: "histogram_quantile(0.95, sum(rate(revision_app_request_latencies_bucket{service_name=~'.*$name'}[$interval])) by (le))"
           provider: prometheus
           sample_size: 
             name: request-count
