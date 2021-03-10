@@ -9,7 +9,7 @@ Iter8ctl can be used with [iter8-kfserving](https://github.com/iter8-tools/iter8
 
 # Installation
 ```
-GOBIN=/usr/local/bin go get github.com/iter8-tools/iter8ctl
+GO111MODULE=on GOBIN=/usr/local/bin go get github.com/iter8-tools/iter8ctl@v0.1.0
 ```
 The above command installs `iter8ctl` under the `/usr/local/bin` directory. To install under a different directory, change the value of `GOBIN` above.
 
@@ -62,7 +62,7 @@ Number of completed iterations: 8
 ****** Winner Assessment ******
 App versions in this experiment: [sample-application-v1 sample-application-v2]
 Winning version: sample-application-v2
-Recommended baseline: sample-application-v2
+Version recommended for promotion: sample-application-v2
 
 ****** Objective Assessment ******
 +--------------------------+-----------------------+-----------------------+
