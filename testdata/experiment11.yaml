@@ -237,7 +237,7 @@ status:
       metadata:
         annotations:
           kubectl.kubernetes.io/last-applied-configuration: |
-            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"mean-latency","namespace":"iter8-knative"},"spec":{"description":"Mean latency","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"(sum(increase(revision_app_request_latencies_sum{revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"gauge","units":"milliseconds","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
+            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"mean-latency","namespace":"iter8-knative"},"spec":{"description":"Mean latency","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"(sum(increase(revision_app_request_latencies_sum{revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"Gauge","units":"milliseconds","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
         creationTimestamp: "2021-03-29T19:09:04Z"
         generation: 1
         labels:
@@ -279,7 +279,7 @@ status:
             (sum(increase(revision_app_request_latencies_sum{revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))
         provider: prometheus
         sampleSize: request-count
-        type: gauge
+        type: Gauge
         units: milliseconds
         urlTemplate: http://prometheus-operated.iter8-system:9090/api/v1/query
     name: iter8-knative/mean-latency
@@ -289,7 +289,7 @@ status:
       metadata:
         annotations:
           kubectl.kubernetes.io/last-applied-configuration: |
-            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"request-count","namespace":"iter8-knative"},"spec":{"description":"Number of requests","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0)\n"}],"provider":"prometheus","type":"counter","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
+            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"request-count","namespace":"iter8-knative"},"spec":{"description":"Number of requests","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0)\n"}],"provider":"prometheus","type":"Counter","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
         creationTimestamp: "2021-03-29T19:09:04Z"
         generation: 1
         labels:
@@ -328,7 +328,7 @@ status:
           value: |
             sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0)
         provider: prometheus
-        type: counter
+        type: Counter
         urlTemplate: http://prometheus-operated.iter8-system:9090/api/v1/query
     name: request-count
   - metricObj:
@@ -337,7 +337,7 @@ status:
       metadata:
         annotations:
           kubectl.kubernetes.io/last-applied-configuration: |
-            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"95th-percentile-tail-latency","namespace":"iter8-knative"},"spec":{"description":"95th percentile tail latency","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"histogram_quantile(0.95, sum(rate(revision_app_request_latencies_bucket{revision_name='$revision'}[$elapsedTime])) by (le))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"gauge","units":"milliseconds","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
+            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"95th-percentile-tail-latency","namespace":"iter8-knative"},"spec":{"description":"95th percentile tail latency","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"histogram_quantile(0.95, sum(rate(revision_app_request_latencies_bucket{revision_name='$revision'}[$elapsedTime])) by (le))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"Gauge","units":"milliseconds","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
         creationTimestamp: "2021-03-29T19:09:04Z"
         generation: 1
         labels:
@@ -379,7 +379,7 @@ status:
             histogram_quantile(0.95, sum(rate(revision_app_request_latencies_bucket{revision_name='$revision'}[$elapsedTime])) by (le))
         provider: prometheus
         sampleSize: request-count
-        type: gauge
+        type: Gauge
         units: milliseconds
         urlTemplate: http://prometheus-operated.iter8-system:9090/api/v1/query
     name: iter8-knative/95th-percentile-tail-latency
@@ -389,7 +389,7 @@ status:
       metadata:
         annotations:
           kubectl.kubernetes.io/last-applied-configuration: |
-            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"error-rate","namespace":"iter8-knative"},"spec":{"description":"Fraction of requests with error responses","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"(sum(increase(revision_app_request_latencies_count{response_code_class!='2xx',revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"gauge","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
+            {"apiVersion":"iter8.tools/v2alpha2","kind":"Metric","metadata":{"annotations":{},"labels":{"creator":"iter8"},"name":"error-rate","namespace":"iter8-knative"},"spec":{"description":"Fraction of requests with error responses","jqExpression":".data.result[0].value[1] | tonumber","params":[{"name":"query","value":"(sum(increase(revision_app_request_latencies_count{response_code_class!='2xx',revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))\n"}],"provider":"prometheus","sampleSize":"request-count","type":"Gauge","urlTemplate":"http://prometheus-operated.iter8-system:9090/api/v1/query"}}
         creationTimestamp: "2021-03-29T19:09:04Z"
         generation: 1
         labels:
@@ -430,7 +430,7 @@ status:
             (sum(increase(revision_app_request_latencies_count{response_code_class!='2xx',revision_name='$revision'}[$elapsedTime])) or on() vector(0)) / (sum(increase(revision_app_request_latencies_count{revision_name='$revision'}[$elapsedTime])) or on() vector(0))
         provider: prometheus
         sampleSize: request-count
-        type: gauge
+        type: Gauge
         urlTemplate: http://prometheus-operated.iter8-system:9090/api/v1/query
     name: iter8-knative/error-rate
   stage: Completed
