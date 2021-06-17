@@ -122,7 +122,7 @@ func StringifyReward(reward v2alpha2.Reward) string {
 	return r
 }
 
-// GetMetricStr returns the metric value as a string for a given metric and a given version.
+// GetMetricDec returns the metric value as a string for a given metric and a given version.
 func (e *Experiment) GetMetricDec(metric string, version string) *inf.Dec {
 	am := e.Status.Analysis.AggregatedMetrics
 	if am == nil {
