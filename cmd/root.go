@@ -18,12 +18,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+var experiment string
+var namespace string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -55,9 +58,11 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.iter8ctl.yaml)")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVarP(&experiment, "experiment", "e", "", "name of the experiment; ignored when -l flag is used")
+
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "namespace of the experiment; ignored when -l flag is used")
+
+	rootCmd.PersistentFlags().BoolP("latest", "l", true, "use the last Iter8 experiment created")
 }
 
 // initConfig reads in config file and ENV variables if set.
