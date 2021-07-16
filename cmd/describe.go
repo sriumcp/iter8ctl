@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	expr "github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +29,10 @@ var describeCmd = &cobra.Command{
 	Args: func(cmd *cobra.Command, args []string) error {
 		if experiment == "" && !latest {
 			return errors.New("Either specify a valid experiment name with -e or use the latest option with -l")
+		}
+		var err error
+		if exp, err = expr.GetExperiment(latest, experiment, namespace); err != nil {
+			return err
 		}
 		return nil
 	},

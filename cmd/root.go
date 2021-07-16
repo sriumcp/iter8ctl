@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"os"
 
+	expr "github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/spf13/cobra"
-
 	"github.com/spf13/viper"
 )
 
@@ -28,6 +28,7 @@ var cfgFile string
 var experiment string
 var namespace string
 var latest bool
+var exp *expr.Experiment
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -56,9 +57,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&experiment, "experiment", "e", "", "name of the experiment; ignored when -l flag is used")
 
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "namespace of the experiment; ignored when -l flag is used")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "namespace of the experiment; ignored when -l flag is used")
 
-	rootCmd.PersistentFlags().BoolVarP(&latest, "latest", "l", false, "use the last Iter8 experiment created; either specify this flag or use -e")
+	rootCmd.PersistentFlags().BoolVarP(&latest, "latest", "l", false, "use the Iter8 experiment with the latest creation timestamp; either specify this flag or use -e")
 }
 
 // initConfig reads in config file and ENV variables if set.

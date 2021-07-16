@@ -2,15 +2,59 @@
 package experiment
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	v2alpha2 "github.com/iter8-tools/etc3/api/v2alpha2"
+	tasks "github.com/iter8-tools/handler/tasks"
 	"gopkg.in/inf.v0"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Experiment is an enhancement of v2alpha2.Experiment struct, and supports various methods used in describing an experiment.
 type Experiment struct {
 	v2alpha2.Experiment
+}
+
+// GetExperiment gets the experiment from cluster
+func GetExperiment(latest bool, name string, namespace string) (*Experiment, error) {
+	results := v2alpha2.ExperimentList{}
+	var exp *v2alpha2.Experiment
+	var err error
+
+	// get all experiments
+	var rc client.Client
+	if rc, err = tasks.GetClient(); err == nil {
+		err = rc.List(context.Background(), &results, &client.ListOptions{})
+	}
+
+	// get latest experiment
+	if latest && err == nil {
+		if len(results.Items) > 0 {
+			exp = &results.Items[len(results.Items)-1]
+		} else {
+			err = errors.New("No experiments found in cluster")
+		}
+	}
+
+	// get named experiment
+	if !latest && err == nil {
+		for i := range results.Items {
+			if results.Items[i].Name == name && results.Items[i].Namespace == namespace {
+				exp = &results.Items[i]
+				break
+			}
+		}
+		if exp == nil {
+			err = errors.New("Experiment " + name + " not found in namespace " + namespace)
+		}
+	}
+
+	// Return experiment or error
+	return &Experiment{
+		*exp,
+	}, err
 }
 
 // Started indicates if at least one iteration of the experiment has completed.
