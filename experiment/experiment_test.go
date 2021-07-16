@@ -8,8 +8,10 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/iter8-tools/etc3/api/v2alpha2"
+	"github.com/iter8-tools/handler/tasks"
 	"github.com/iter8-tools/iter8ctl/utils"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -110,6 +112,93 @@ func TestStringifyObjective(t *testing.T) {
 		objs[i] = StringifyObjective(tests[2].exp.Spec.Criteria.Objectives[i])
 	}
 	assert.Equal(t, objectives, objs)
+}
+
+func TestAssertComplete(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").WithCondition(
+		v2alpha2.ExperimentConditionExperimentCompleted,
+		corev1.ConditionTrue,
+		"experiment is over",
+		"",
+	).Build()
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{Completed})
+
+	assert.NoError(t, err)
+}
+
+func TestAssertInComplete(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").WithCondition(
+		v2alpha2.ExperimentConditionExperimentCompleted,
+		corev1.ConditionFalse,
+		"experiment is not over",
+		"",
+	).Build()
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{Completed})
+
+	assert.Error(t, err)
+}
+
+func TestAssertWinnerFound(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").Build()
+	exp.Status.Analysis = &v2alpha2.Analysis{}
+	exp.Status.Analysis.WinnerAssessment = &v2alpha2.WinnerAssessmentAnalysis{
+		Data: v2alpha2.WinnerAssessmentData{
+			WinnerFound: true,
+			Winner:      tasks.StringPointer("the best"),
+		},
+	}
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{WinnerFound})
+
+	assert.NoError(t, err)
+}
+
+func TestAssertNoWinnerFound(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").Build()
+	exp.Status.Analysis = &v2alpha2.Analysis{}
+	exp.Status.Analysis.WinnerAssessment = &v2alpha2.WinnerAssessmentAnalysis{
+		AnalysisMetaData: v2alpha2.AnalysisMetaData{},
+		Data: v2alpha2.WinnerAssessmentData{
+			WinnerFound: false,
+		},
+	}
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{WinnerFound})
+
+	assert.Error(t, err)
+}
+
+func TestAssertNoWinnerFound2(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").Build()
+	exp.Status.Analysis = &v2alpha2.Analysis{}
+	exp.Status.Analysis.WinnerAssessment = nil
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{WinnerFound})
+
+	assert.Error(t, err)
+}
+
+func TestAssertNoWinnerFound3(t *testing.T) {
+	exp := v2alpha2.NewExperiment("test", "test").Build()
+	exp.Status.Analysis = nil
+
+	err := (&Experiment{
+		*exp,
+	}).Assert([]ConditionType{WinnerFound})
+
+	assert.Error(t, err)
 }
 
 /* Examples */

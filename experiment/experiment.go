@@ -28,6 +28,19 @@ type Experiment struct {
 	v2alpha2.Experiment
 }
 
+type ConditionType string
+
+const (
+	Completed ConditionType = "completed"
+	// Successful     ConditionType = "successful"
+	// Failure        ConditionType = "failure"
+	// HandlerFailure ConditionType = "handlerFailure"
+	WinnerFound ConditionType = "winnerFound"
+	// CandidateWon   ConditionType = "candidateWon"
+	// BaselineWon    ConditionType = "baselineWon"
+	// NoWinner       ConditionType = "noWinner"
+)
+
 // for mocking in tests
 var k8sClient client.Client
 
@@ -115,8 +128,33 @@ func GetExperiment(latest bool, name string, namespace string) (*Experiment, err
 
 // Started indicates if at least one iteration of the experiment has completed.
 func (e *Experiment) Started() bool {
+	if e == nil {
+		return false
+	}
 	c := e.Status.CompletedIterations
 	return c != nil && *c > 0
+}
+
+// Completed indicates if the experiment has completed.
+func (e *Experiment) Completed() bool {
+	if e == nil {
+		return false
+	}
+	c := e.Status.GetCondition(v2alpha2.ExperimentConditionExperimentCompleted)
+	return c != nil && c.IsTrue()
+}
+
+// WinnerFound indicates if the experiment has found a winning version (winner).
+func (e *Experiment) WinnerFound() bool {
+	if e == nil {
+		return false
+	}
+	if a := e.Status.Analysis; a != nil {
+		if w := a.WinnerAssessment; w != nil {
+			return w.Data.WinnerFound
+		}
+	}
+	return false
 }
 
 // GetVersions returns the slice of version name strings. If the VersionInfo section is not present in the experiment's spec, then this slice is empty.
@@ -281,4 +319,23 @@ func (e *Experiment) GetAnnotatedMetricStrs(reward v2alpha2.Reward) []string {
 		row[*currentBestIndex] = row[*currentBestIndex] + " *"
 	}
 	return row
+}
+
+// Assert verifies a given set of conditions for the experiment.
+func (exp *Experiment) Assert(conditions []ConditionType) error {
+	for _, cond := range conditions {
+		switch cond {
+		case Completed:
+			if !exp.Completed() {
+				return errors.New("Experiment has not completed.")
+			}
+		case WinnerFound:
+			if !exp.WinnerFound() {
+				return errors.New("No winner found in experiment.")
+			}
+		default:
+			return errors.New("Unsupported condition found in assertion.")
+		}
+	}
+	return nil
 }

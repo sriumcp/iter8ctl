@@ -18,24 +18,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 
+	expr "github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/spf13/cobra"
 )
 
 var conditions []string
-
-type ConditionType string
-
-const (
-	Completed      ConditionType = "completed"
-	Successful     ConditionType = "successful"
-	Failure        ConditionType = "failure"
-	HandlerFailure ConditionType = "handlerFailure"
-	WinnerFound    ConditionType = "winnerFound"
-	CandidateWon   ConditionType = "candidateWon"
-	BaselineWon    ConditionType = "baselineWon"
-	NoWinner       ConditionType = "noWinner"
-)
+var conds []expr.ConditionType
 
 // assertCmd represents the assert command
 var assertCmd = &cobra.Command{
@@ -49,14 +39,10 @@ var assertCmd = &cobra.Command{
 		}
 		for _, cond := range conditions {
 			switch cond {
-			case string(Completed):
-			case string(Successful):
-			case string(Failure):
-			case string(HandlerFailure):
-			case string(WinnerFound):
-			case string(CandidateWon):
-			case string(BaselineWon):
-			case string(NoWinner):
+			case string(expr.Completed):
+				conds = append(conds, expr.Completed)
+			case string(expr.WinnerFound):
+				conds = append(conds, expr.WinnerFound)
 			default:
 				return errors.New("Invalid condition: " + cond)
 			}
@@ -66,15 +52,18 @@ var assertCmd = &cobra.Command{
 	Short: "Assert conditions for the experiment",
 	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially useful in CI/CD/Gitops pipelines prior to version promotion or rollback. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("experiment: " + experiment)
-		fmt.Println(fmt.Sprint("latest: ", latest))
-		fmt.Println("assert called")
+		if err := exp.Assert(conds); err == nil {
+			fmt.Println("All conditions satisfied.")
+		} else {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(assertCmd)
-	assertCmd.Flags().StringSliceVarP(&conditions, "condition", "c", nil, "completed | successful | failure | handlerFailure | winnerFound | candidateWon | baselineWon | noWinner")
+	assertCmd.Flags().StringSliceVarP(&conditions, "condition", "c", nil, "completed | winnerFound")
 
 	// Here you will define your flags and configuration settings.
 
