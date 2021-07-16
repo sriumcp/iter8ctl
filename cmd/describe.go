@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -23,7 +24,13 @@ import (
 
 // describeCmd represents the describe command
 var describeCmd = &cobra.Command{
-	Use:   "describe",
+	Use: "describe",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if experiment == "" && !latest {
+			return errors.New("Either specify a valid experiment name with -e or use the latest option with -l")
+		}
+		return nil
+	},
 	Short: "Describe an Iter8 experiment",
 	Long:  `Summarize an experiment, including the stage of the experiment, how versions are performing with respect to the experiment criteria (reward, SLOs, metrics), and information about the winning version.`,
 	Run: func(cmd *cobra.Command, args []string) {

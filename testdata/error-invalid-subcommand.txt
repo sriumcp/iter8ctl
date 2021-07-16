@@ -1,4 +1,0 @@
-expected 'describe' subcommand
-Usage of describe:
-  -f string
-    	absolute path to experiment yaml file, or - for console input (stdin)

@@ -16,7 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -32,13 +31,7 @@ var latest bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use: "iter8ctl {-l | -e experiment-name [-n experiment-namespace]} [-c config-file]",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if experiment == "" && !latest {
-			return errors.New("Either specify a valid experiment name with -e or use the latest option with -l")
-		}
-		return nil
-	},
+	Use:   "iter8ctl",
 	Short: "Iter8 command line utility",
 	Long:  `iter8ctl promotes understanding of an Iter8 experiment. It can be used to describe the stage of the experiment, how versions are performing, and assert various conditions relating to the experiment.`,
 	// Uncomment the following line if your bare application
@@ -59,13 +52,13 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "c", "config file (default is $HOME/.iter8ctl.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.iter8ctl.yaml)")
 
 	rootCmd.PersistentFlags().StringVarP(&experiment, "experiment", "e", "", "name of the experiment; ignored when -l flag is used")
 
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "namespace of the experiment; ignored when -l flag is used")
 
-	rootCmd.PersistentFlags().BoolVarP(&latest, "latest", "l", true, "use the last Iter8 experiment created")
+	rootCmd.PersistentFlags().BoolVarP(&latest, "latest", "l", false, "use the last Iter8 experiment created; either specify this flag or use -e")
 }
 
 // initConfig reads in config file and ENV variables if set.
