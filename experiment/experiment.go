@@ -28,13 +28,16 @@ type Experiment struct {
 	v2alpha2.Experiment
 }
 
+// ConditionType is a type for conditions that can be asserted
 type ConditionType string
 
 const (
+	// Completed implies experiment is complete
 	Completed ConditionType = "completed"
 	// Successful     ConditionType = "successful"
 	// Failure        ConditionType = "failure"
 	// HandlerFailure ConditionType = "handlerFailure"
+	// WinnerFound implies experiment has found a winner
 	WinnerFound ConditionType = "winnerFound"
 	// CandidateWon   ConditionType = "candidateWon"
 	// BaselineWon    ConditionType = "baselineWon"
@@ -322,19 +325,19 @@ func (e *Experiment) GetAnnotatedMetricStrs(reward v2alpha2.Reward) []string {
 }
 
 // Assert verifies a given set of conditions for the experiment.
-func (exp *Experiment) Assert(conditions []ConditionType) error {
+func (e *Experiment) Assert(conditions []ConditionType) error {
 	for _, cond := range conditions {
 		switch cond {
 		case Completed:
-			if !exp.Completed() {
-				return errors.New("Experiment has not completed.")
+			if !e.Completed() {
+				return errors.New("experiment has not completed")
 			}
 		case WinnerFound:
-			if !exp.WinnerFound() {
-				return errors.New("No winner found in experiment.")
+			if !e.WinnerFound() {
+				return errors.New("no winner found in experiment")
 			}
 		default:
-			return errors.New("Unsupported condition found in assertion.")
+			return errors.New("unsupported condition found in assertion")
 		}
 	}
 	return nil
