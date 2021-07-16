@@ -64,7 +64,7 @@ var assertCmd = &cobra.Command{
 		return nil
 	},
 	Short: "Assert conditions for the experiment",
-	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially useful in CI/CD/Gitops pipelines prior to version promotion or rollback.`,
+	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially useful in CI/CD/Gitops pipelines prior to version promotion or rollback. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("experiment: " + experiment)
 		fmt.Println(fmt.Sprint("latest: ", latest))

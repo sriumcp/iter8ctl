@@ -34,7 +34,7 @@ var exp *expr.Experiment
 var rootCmd = &cobra.Command{
 	Use:   "iter8ctl",
 	Short: "Iter8 command line utility",
-	Long:  `iter8ctl promotes understanding of an Iter8 experiment. It can be used to describe the stage of the experiment, how versions are performing, and assert various conditions relating to the experiment.`,
+	Long:  `iter8ctl promotes understanding of an Iter8 experiment. It can be used to describe the stage of the experiment, how versions are performing, and assert various conditions relating to the experiment. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

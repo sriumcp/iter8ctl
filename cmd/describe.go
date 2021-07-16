@@ -17,8 +17,8 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 
+	"github.com/iter8-tools/iter8ctl/describe"
 	expr "github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/spf13/cobra"
 )
@@ -37,9 +37,9 @@ var describeCmd = &cobra.Command{
 		return nil
 	},
 	Short: "Describe an Iter8 experiment",
-	Long:  `Summarize an experiment, including the stage of the experiment, how versions are performing with respect to the experiment criteria (reward, SLOs, metrics), and information about the winning version.`,
+	Long:  `Summarize an experiment, including the stage of the experiment, how versions are performing with respect to the experiment criteria (reward, SLOs, metrics), and information about the winning version. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("describe called")
+		describe.Builder().WithExperiment(exp).PrintAnalysis()
 	},
 }
 

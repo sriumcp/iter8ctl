@@ -6,15 +6,66 @@ import (
 	"errors"
 	"fmt"
 
-	v2alpha2 "github.com/iter8-tools/etc3/api/v2alpha2"
+	"github.com/iter8-tools/etc3/api/v2alpha2"
 	tasks "github.com/iter8-tools/handler/tasks"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/inf.v0"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
+
+var log *logrus.Logger
+
+func init() {
+	log = tasks.GetLogger()
+}
 
 // Experiment is an enhancement of v2alpha2.Experiment struct, and supports various methods used in describing an experiment.
 type Experiment struct {
 	v2alpha2.Experiment
+}
+
+// for mocking in tests
+var k8sClient client.Client
+
+// GetConfig variable is useful for test mocks.
+var GetConfig = func() (*rest.Config, error) {
+	return config.GetConfig()
+}
+
+// GetClient constructs and returns a K8s client.
+// The returned client has experiment types registered.
+var GetClient = func() (rc client.Client, err error) {
+	var restConf *rest.Config
+	restConf, err = GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var addKnownTypes = func(scheme *runtime.Scheme) error {
+		// register iter8.GroupVersion and type
+		metav1.AddToGroupVersion(scheme, v2alpha2.GroupVersion)
+		scheme.AddKnownTypes(v2alpha2.GroupVersion, &v2alpha2.Experiment{})
+		scheme.AddKnownTypes(v2alpha2.GroupVersion, &v2alpha2.ExperimentList{})
+		return nil
+	}
+
+	var schemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	scheme := runtime.NewScheme()
+	err = schemeBuilder.AddToScheme(scheme)
+
+	if err == nil {
+		rc, err = client.New(restConf, client.Options{
+			Scheme: scheme,
+		})
+		if err == nil {
+			return rc, nil
+		}
+	}
+	return nil, errors.New("cannot get client using rest config")
 }
 
 // GetExperiment gets the experiment from cluster
@@ -25,7 +76,7 @@ func GetExperiment(latest bool, name string, namespace string) (*Experiment, err
 
 	// get all experiments
 	var rc client.Client
-	if rc, err = tasks.GetClient(); err == nil {
+	if rc, err = GetClient(); err == nil {
 		err = rc.List(context.Background(), &results, &client.ListOptions{})
 	}
 
@@ -51,10 +102,15 @@ func GetExperiment(latest bool, name string, namespace string) (*Experiment, err
 		}
 	}
 
-	// Return experiment or error
+	// return error
+	if err != nil {
+		return nil, err
+	}
+
+	// Return experiment
 	return &Experiment{
 		*exp,
-	}, err
+	}, nil
 }
 
 // Started indicates if at least one iteration of the experiment has completed.
