@@ -26,13 +26,8 @@ var conditions []string
 // assertCmd represents the assert command
 var assertCmd = &cobra.Command{
 	Use:   "assert",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Assert conditions for the experiment",
+	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially in CI/CD/Gitops pipelines to assert conditions prior to version promotion or rollback.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("assert called")
 	},
