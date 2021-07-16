@@ -1,4 +1,3 @@
-/* Package cmd with describe subcommand */
 package cmd
 
 import (

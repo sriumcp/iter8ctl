@@ -1,4 +1,3 @@
-/* Package cmd with assert subcommand */
 package cmd
 
 import (

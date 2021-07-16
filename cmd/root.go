@@ -1,4 +1,3 @@
-/* Package cmd with root iter8ctl command */
 package cmd
 
 import (

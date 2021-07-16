@@ -37,6 +37,7 @@ const (
 	// Successful     ConditionType = "successful"
 	// Failure        ConditionType = "failure"
 	// HandlerFailure ConditionType = "handlerFailure"
+
 	// WinnerFound implies experiment has found a winner
 	WinnerFound ConditionType = "winnerFound"
 	// CandidateWon   ConditionType = "candidateWon"
