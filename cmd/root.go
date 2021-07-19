@@ -10,8 +10,8 @@ import (
 )
 
 var cfgFile string
-var experiment string
-var namespace string
+var expName string
+var expNamespace string
 var latest bool
 var exp *expr.Experiment
 
@@ -41,7 +41,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.iter8ctl.yaml)")
 
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "namespace of the experiment; ignored when experiment name is not specified explicitly")
+	rootCmd.PersistentFlags().StringVarP(&expNamespace, "namespace", "n", "default", "namespace of the experiment; ignored when experiment name is not specified explicitly")
 }
 
 // initConfig reads in config file and ENV variables if set.

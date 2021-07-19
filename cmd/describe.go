@@ -18,8 +18,16 @@ var describeCmd = &cobra.Command{
 			return errors.New("more than one positional argument supplied")
 		}
 		latest = (len(args) == 0)
+		if !latest {
+			expName = args[0]
+		}
+		// at this stage, either latest must be true or expName must be non-empty
+		if !latest && expName == "" {
+			panic("either latest must be true or expName must be non-empty")
+		}
+		// get experiment from cluster
 		var err error
-		if exp, err = expr.GetExperiment(latest, experiment, namespace); err != nil {
+		if exp, err = expr.GetExperiment(latest, expName, expNamespace); err != nil {
 			return err
 		}
 		return nil
