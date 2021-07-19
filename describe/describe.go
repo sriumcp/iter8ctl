@@ -2,121 +2,64 @@
 package describe
 
 import (
-	"errors"
-	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/iter8-tools/etc3/api/v2alpha2"
-	"github.com/iter8-tools/iter8ctl/experiment"
+	"github.com/iter8-tools/handler/tasks"
+	expr "github.com/iter8-tools/iter8ctl/experiment"
 	"github.com/olekukonko/tablewriter"
 )
 
-// Cmd struct contains fields that store flags and intermediate results associated with an invocation of 'iter8ctl describe' subcommand.
-type Cmd struct {
-	flagSet        *flag.FlagSet
-	experimentPath string
-	experiment     *experiment.Experiment
-	description    strings.Builder
-	err            error
-	stdin          io.Reader
-	stdout         io.Writer
-	stderr         io.Writer
-	// Usage is a function that is invoked when execution of any `Cmd` method results in an error.
-	// The typical behavior of `Cmd` after an error is as follows: Usage() prints an error message to stderr, subsequent Cmd methods turn into no-ops, and the program exits.
-	// Note that Usage() is a field and not a method. You can supply your own implementation of Usage() while constructing `Cmd`.
-	Usage func()
+// Result struct contains fields that store intermediate results associated with an invocation of 'iter8ctl describe' subcommand.
+type Result struct {
+	experiment  *expr.Experiment
+	description strings.Builder
+	err         error
 }
 
 // Builder returns an initialized Cmd struct pointer.
 // Builder enables the builder design pattern along with method chaining.
-func Builder(stdin io.Reader, stdout io.Writer, stderr io.Writer) *Cmd {
-	// ContinueOnError ensures flagSet does not ExitOnError
-	var flagSet = flag.NewFlagSet("describe", flag.ContinueOnError)
-	flagSet.SetOutput(stderr)
-
-	var d = &Cmd{
-		flagSet:        flagSet,
-		experimentPath: "",
-		experiment:     &experiment.Experiment{},
-		description:    strings.Builder{},
-		err:            nil,
-		stdin:          stdin,
-		stdout:         stdout,
-		stderr:         stderr,
-		Usage:          flagSet.Usage,
+func Builder() *Result {
+	var d = &Result{
+		experiment:  nil,
+		description: strings.Builder{},
+		err:         nil,
 	}
-
-	//setup flagSet
-	const (
-		defaultExperimentPath = ""
-		usage                 = "absolute path to experiment yaml file, or - for console input (stdin)"
-	)
-	flagSet.StringVar(&d.experimentPath, "f", defaultExperimentPath, usage)
-
 	return d
 }
 
 // Error returns any error generated during the invocation of Cmd methods, or nil if there are no errors.
-func (d *Cmd) Error() error {
+func (d *Result) Error() error {
 	return d.err
 }
 
-// ParseFlags parses the flags supplied to Cmd. The returned Cmd struct contains the parsed result. If invalid flags are supplied, ParseFlags generates an error.
-func (d *Cmd) ParseFlags(args []string) *Cmd {
+// WithExperiment populates the Result struct with an experiment.
+func (d *Result) WithExperiment(exp *expr.Experiment) *Result {
 	if d.err != nil {
 		return d
 	}
-	d.err = d.flagSet.Parse(args)
-	if d.err == nil {
-		if d.flagSet.NFlag() == 0 {
-			d.err = errors.New("Missing experiment")
-			fmt.Fprintln(d.stderr, d.err)
-			d.Usage()
-		}
-	}
+	d.experiment = exp
 	return d
 }
 
-// GetExperiment populates the Cmd struct with an experiment.
-// The experiment may come from an input file when `iter8ctl describe` subcommand is invoked with the "-f experiment-file-path.yaml" flag.
-// The experiment may also come from console input when `iter8ctl describe` subcommand is invoked with the "-f -" flag.
-// The experiment input needs to be a valid iter8 experiment YAML. Otherwise, GetExperiment will generate an error.
-func (d *Cmd) GetExperiment() *Cmd {
+// FromFile populates the Result struct with an experiment from file.
+func (d *Result) FromFile(path string) *Result {
 	if d.err != nil {
 		return d
 	}
-	var expBytes []byte
-	if d.experimentPath == "-" {
-		expBytes, d.err = ioutil.ReadAll(d.stdin)
-	} else {
-		expBytes, d.err = ioutil.ReadFile(d.experimentPath)
-	}
-	if d.err != nil {
-		d.err = errors.New("Error reading experiment YAML input")
-		fmt.Fprintln(d.stderr, d.err)
+	exp, err := (&tasks.Builder{}).FromFile(path).Build()
+	if err != nil {
+		d.err = err
 		return d
 	}
-	if len(expBytes) == 0 {
-		d.err = errors.New("Error reading experiment YAML input... zero bytes read")
-		fmt.Fprintln(d.stderr, d.err)
-		return d
-	}
-	d.err = yaml.Unmarshal(expBytes, d.experiment)
-	if d.err != nil {
-		d.err = errors.New("unmarshal error... this could be due to invalid experiment YAML input")
-		fmt.Fprintln(d.stderr, d.err)
-		return d
-	}
-
+	d.experiment = &expr.Experiment{Experiment: exp.Experiment}
 	return d
 }
 
 // printProgress prints name, namespace, and target of the experiment and the number of completed iterations into d's description buffer.
-func (d *Cmd) printProgress() *Cmd {
+func (d *Result) printProgress() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -146,7 +89,7 @@ func (d *Cmd) printProgress() *Cmd {
 
 // printWinnerAssessment prints the winning version in the experiment into d's description buffer.
 // If winner assessment is unavailable for the underlying experiment, this method will indicate likewise.
-func (d *Cmd) printWinnerAssessment() *Cmd {
+func (d *Result) printWinnerAssessment() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -188,7 +131,7 @@ func (d *Cmd) printWinnerAssessment() *Cmd {
 // printRewardAssessment prints a matrix of values for each reward-version pair.
 // Rows correspond to experiment rewards. Columns correspond to versions.
 // The current "best" version for each reward is denoted with a "*".
-func (d *Cmd) printRewardAssessment() *Cmd {
+func (d *Result) printRewardAssessment() *Result {
 	if d.err != nil ||
 		d.experiment.Status.Analysis == nil ||
 		d.experiment.Status.Analysis.VersionAssessments == nil ||
@@ -204,7 +147,7 @@ func (d *Cmd) printRewardAssessment() *Cmd {
 	versions := d.experiment.GetVersions()
 	table.SetHeader(append([]string{"Reward"}, versions...))
 	for _, reward := range d.experiment.Spec.Criteria.Rewards {
-		row := []string{experiment.StringifyReward(reward)}
+		row := []string{expr.StringifyReward(reward)}
 		table.Append(append(row, d.experiment.GetAnnotatedMetricStrs(reward)...))
 	}
 	table.Render()
@@ -216,7 +159,7 @@ func (d *Cmd) printRewardAssessment() *Cmd {
 // Rows correspond to experiment objectives, columns correspond to versions, and entry [i, j] indicates if objective i is satisfied by version j.
 // Objective assessments are printed in the same sequence as in the experiment's spec.criteria.objectives section.
 // If objective assessments are unavailable for the underlying experiment, this method will indicate likewise.
-func (d *Cmd) printObjectiveAssessment() *Cmd {
+func (d *Result) printObjectiveAssessment() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -229,7 +172,7 @@ func (d *Cmd) printObjectiveAssessment() *Cmd {
 			versions := d.experiment.GetVersions()
 			table.SetHeader(append([]string{"Objective"}, versions...))
 			for i, objective := range d.experiment.Spec.Criteria.Objectives {
-				row := []string{experiment.StringifyObjective(objective)}
+				row := []string{expr.StringifyObjective(objective)}
 				table.Append(append(row, d.experiment.GetSatisfyStrs(i)...))
 			}
 			table.Render()
@@ -239,7 +182,7 @@ func (d *Cmd) printObjectiveAssessment() *Cmd {
 }
 
 // printVersionAssessment prints how each version is performing with respect to experiment criteria into d's description buffer. This method invokes printObjectiveAssessment under the covers.
-func (d *Cmd) printVersionAssessment() *Cmd {
+func (d *Result) printVersionAssessment() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -253,7 +196,7 @@ func (d *Cmd) printVersionAssessment() *Cmd {
 // Rows correspond to experiment metrics, columns correspond to versions, and entry [i, j] indicates the value of metric i for version j.
 // Metrics are printed in the same sequence as in the experiment's status.metrics section.
 // If metrics are unavailable for the underlying experiment, this method will indicate likewise.
-func (d *Cmd) printMetrics() *Cmd {
+func (d *Result) printMetrics() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -266,7 +209,7 @@ func (d *Cmd) printMetrics() *Cmd {
 			versions := d.experiment.GetVersions()
 			table.SetHeader(append([]string{"Metric"}, versions...))
 			for _, metricInfo := range d.experiment.Status.Metrics {
-				row := []string{experiment.GetMetricNameAndUnits(metricInfo)}
+				row := []string{expr.GetMetricNameAndUnits(metricInfo)}
 				table.Append(append(row, d.experiment.GetMetricStrs(metricInfo.Name)...))
 			}
 			table.Render()
@@ -276,7 +219,7 @@ func (d *Cmd) printMetrics() *Cmd {
 }
 
 // PrintAnalysis prints the progress of the iter8 experiment, winner assessment, version assessment, and metrics.
-func (d *Cmd) PrintAnalysis() *Cmd {
+func (d *Result) PrintAnalysis() *Result {
 	if d.err != nil {
 		return d
 	}
@@ -288,7 +231,7 @@ func (d *Cmd) PrintAnalysis() *Cmd {
 			printMetrics()
 	}
 	if d.err == nil {
-		fmt.Fprintln(d.stdout, d.description.String())
+		fmt.Fprintln(os.Stdout, d.description.String())
 	}
 	return d
 }

@@ -2,21 +2,163 @@
 package experiment
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
-	v2alpha2 "github.com/iter8-tools/etc3/api/v2alpha2"
+	"github.com/iter8-tools/etc3/api/v2alpha2"
+	tasks "github.com/iter8-tools/handler/tasks"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/inf.v0"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
+
+var log *logrus.Logger
+
+func init() {
+	log = tasks.GetLogger()
+}
 
 // Experiment is an enhancement of v2alpha2.Experiment struct, and supports various methods used in describing an experiment.
 type Experiment struct {
 	v2alpha2.Experiment
 }
 
+// ConditionType is a type for conditions that can be asserted
+type ConditionType string
+
+const (
+	// Completed implies experiment is complete
+	Completed ConditionType = "completed"
+	// Successful     ConditionType = "successful"
+	// Failure        ConditionType = "failure"
+	// HandlerFailure ConditionType = "handlerFailure"
+
+	// WinnerFound implies experiment has found a winner
+	WinnerFound ConditionType = "winnerFound"
+	// CandidateWon   ConditionType = "candidateWon"
+	// BaselineWon    ConditionType = "baselineWon"
+	// NoWinner       ConditionType = "noWinner"
+)
+
+// for mocking in tests
+var k8sClient client.Client
+
+// GetConfig variable is useful for test mocks.
+var GetConfig = func() (*rest.Config, error) {
+	return config.GetConfig()
+}
+
+// GetClient constructs and returns a K8s client.
+// The returned client has experiment types registered.
+var GetClient = func() (rc client.Client, err error) {
+	var restConf *rest.Config
+	restConf, err = GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var addKnownTypes = func(scheme *runtime.Scheme) error {
+		// register iter8.GroupVersion and type
+		metav1.AddToGroupVersion(scheme, v2alpha2.GroupVersion)
+		scheme.AddKnownTypes(v2alpha2.GroupVersion, &v2alpha2.Experiment{})
+		scheme.AddKnownTypes(v2alpha2.GroupVersion, &v2alpha2.ExperimentList{})
+		return nil
+	}
+
+	var schemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	scheme := runtime.NewScheme()
+	err = schemeBuilder.AddToScheme(scheme)
+
+	if err == nil {
+		rc, err = client.New(restConf, client.Options{
+			Scheme: scheme,
+		})
+		if err == nil {
+			return rc, nil
+		}
+	}
+	return nil, errors.New("cannot get client using rest config")
+}
+
+// GetExperiment gets the experiment from cluster
+func GetExperiment(latest bool, name string, namespace string) (*Experiment, error) {
+	results := v2alpha2.ExperimentList{}
+	var exp *v2alpha2.Experiment
+	var err error
+
+	// get all experiments
+	var rc client.Client
+	if rc, err = GetClient(); err == nil {
+		err = rc.List(context.Background(), &results, &client.ListOptions{})
+	}
+
+	// get latest experiment
+	if latest && err == nil {
+		if len(results.Items) > 0 {
+			exp = &results.Items[len(results.Items)-1]
+		} else {
+			err = errors.New("No experiments found in cluster")
+		}
+	}
+
+	// get named experiment
+	if !latest && err == nil {
+		for i := range results.Items {
+			if results.Items[i].Name == name && results.Items[i].Namespace == namespace {
+				exp = &results.Items[i]
+				break
+			}
+		}
+		if exp == nil {
+			err = errors.New("Experiment " + name + " not found in namespace " + namespace)
+		}
+	}
+
+	// return error
+	if err != nil {
+		return nil, err
+	}
+
+	// Return experiment
+	return &Experiment{
+		*exp,
+	}, nil
+}
+
 // Started indicates if at least one iteration of the experiment has completed.
 func (e *Experiment) Started() bool {
+	if e == nil {
+		return false
+	}
 	c := e.Status.CompletedIterations
 	return c != nil && *c > 0
+}
+
+// Completed indicates if the experiment has completed.
+func (e *Experiment) Completed() bool {
+	if e == nil {
+		return false
+	}
+	c := e.Status.GetCondition(v2alpha2.ExperimentConditionExperimentCompleted)
+	return c != nil && c.IsTrue()
+}
+
+// WinnerFound indicates if the experiment has found a winning version (winner).
+func (e *Experiment) WinnerFound() bool {
+	if e == nil {
+		return false
+	}
+	if a := e.Status.Analysis; a != nil {
+		if w := a.WinnerAssessment; w != nil {
+			return w.Data.WinnerFound
+		}
+	}
+	return false
 }
 
 // GetVersions returns the slice of version name strings. If the VersionInfo section is not present in the experiment's spec, then this slice is empty.
@@ -181,4 +323,23 @@ func (e *Experiment) GetAnnotatedMetricStrs(reward v2alpha2.Reward) []string {
 		row[*currentBestIndex] = row[*currentBestIndex] + " *"
 	}
 	return row
+}
+
+// Assert verifies a given set of conditions for the experiment.
+func (e *Experiment) Assert(conditions []ConditionType) error {
+	for _, cond := range conditions {
+		switch cond {
+		case Completed:
+			if !e.Completed() {
+				return errors.New("experiment has not completed")
+			}
+		case WinnerFound:
+			if !e.WinnerFound() {
+				return errors.New("no winner found in experiment")
+			}
+		default:
+			return errors.New("unsupported condition found in assertion")
+		}
+	}
+	return nil
 }
