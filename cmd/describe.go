@@ -10,19 +10,20 @@ import (
 
 // describeCmd represents the describe command
 var describeCmd = &cobra.Command{
-	Use: "describe",
+	Use:   "describe [experiment-name]",
+	Short: "Describe an Iter8 experiment",
+	Long:  `Summarize an experiment, including the stage of the experiment, how versions are performing with respect to the experiment criteria (reward, SLOs, metrics), and information about the winning version. When experiment-name is omitted, the experiment with the latest creation timestamp in the cluster is described.`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if experiment == "" && !latest {
-			return errors.New("Either specify a valid experiment name with -e or use the latest option with -l")
+		if len(args) > 1 {
+			return errors.New("more than one positional argument supplied")
 		}
+		latest = (len(args) == 0)
 		var err error
 		if exp, err = expr.GetExperiment(latest, experiment, namespace); err != nil {
 			return err
 		}
 		return nil
 	},
-	Short: "Describe an Iter8 experiment",
-	Long:  `Summarize an experiment, including the stage of the experiment, how versions are performing with respect to the experiment criteria (reward, SLOs, metrics), and information about the winning version. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		describe.Builder().WithExperiment(exp).PrintAnalysis()
 	},

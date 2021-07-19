@@ -20,6 +20,7 @@ var rootCmd = &cobra.Command{
 	Use:   "iter8ctl",
 	Short: "Iter8 command line utility",
 	Long:  `iter8ctl promotes understanding of an Iter8 experiment. It can be used to describe the stage of the experiment, how versions are performing, and assert various conditions relating to the experiment. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
+	Args:  cobra.MaximumNArgs(1),
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -40,11 +41,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.iter8ctl.yaml)")
 
-	rootCmd.PersistentFlags().StringVarP(&experiment, "experiment", "e", "", "name of the experiment; ignored when -l flag is used")
-
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "namespace of the experiment; ignored when -l flag is used")
-
-	rootCmd.PersistentFlags().BoolVarP(&latest, "latest", "l", false, "use the Iter8 experiment with the latest creation timestamp; either specify this flag or use -e")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "namespace of the experiment; ignored when experiment name is not specified explicitly")
 }
 
 // initConfig reads in config file and ENV variables if set.

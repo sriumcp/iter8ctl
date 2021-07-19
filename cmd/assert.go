@@ -14,10 +14,17 @@ var conds []expr.ConditionType
 
 // assertCmd represents the assert command
 var assertCmd = &cobra.Command{
-	Use: "assert",
+	Use:   "assert [experiment-name]",
+	Short: "Assert conditions for an Iter8 experiment",
+	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially useful in CI/CD/Gitops pipelines prior to version promotion or rollback. When experiment-name is omitted, the experiment with the latest creation timestamp in the cluster is used for assertions.`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if experiment == "" && !latest {
-			return errors.New("Either specify a valid experiment name with -e or use the latest option with -l")
+		if len(args) > 1 {
+			return errors.New("More than one positional argument supplied")
+		}
+		latest = (len(args) == 0)
+		var err error
+		if exp, err = expr.GetExperiment(latest, experiment, namespace); err != nil {
+			return err
 		}
 		if conditions == nil || len(conditions) == 0 {
 			return errors.New("One or more conditions must be specified with assert")
@@ -34,8 +41,6 @@ var assertCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Short: "Assert conditions for the experiment",
-	Long:  `One or more conditions can be asserted using this command for an Iter8 experiment. This command is especially useful in CI/CD/Gitops pipelines prior to version promotion or rollback. This program is a K8s client and requires a valid K8s cluster with Iter8 installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := exp.Assert(conds); err == nil {
 			fmt.Println("All conditions satisfied.")

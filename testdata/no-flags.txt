@@ -4,16 +4,14 @@ Usage:
   iter8ctl [command]
 
 Available Commands:
-  assert      Assert conditions for the experiment
+  assert      Assert conditions for an Iter8 experiment
   completion  generate the autocompletion script for the specified shell
   describe    Describe an Iter8 experiment
   help        Help about any command
 
 Flags:
-      --config string       config file (default is $HOME/.iter8ctl.yaml)
-  -e, --experiment string   name of the experiment; ignored when -l flag is used
-  -h, --help                help for iter8ctl
-  -l, --latest              use the Iter8 experiment with the latest creation timestamp; either specify this flag or use -e
-  -n, --namespace string    namespace of the experiment; ignored when -l flag is used (default "default")
+      --config string      config file (default is $HOME/.iter8ctl.yaml)
+  -h, --help               help for iter8ctl
+  -n, --namespace string   namespace of the experiment; ignored when experiment name is not specified explicitly (default "default")
 
 Use "iter8ctl [command] --help" for more information about a command.
